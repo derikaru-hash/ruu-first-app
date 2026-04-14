@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ルウ王子 | AIコンサルタント × カレー倶楽部ルウ オーナー</title>
+  <meta name="description" content="宮崎・都城を拠点に活動するAIコンサルタント兼カレー倶楽部ルウオーナー、ルウ王子の公式サイト。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Noto+Serif+JP:wght@700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --orange: #E8621A;
+      --orange-light: #F5884A;
+      --dark: #1A1410;
+      --dark-mid: #2C2018;
+      --cream: #FAF6F0;
+      --text: #2C2018;
+      --text-muted: #7A6A5A;
+      --border: #E8DDD0;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      background: var(--cream);
+      color: var(--text);
+      line-height: 1.8;
+    }
+
+    /* ======= NAV ======= */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.2rem 2.5rem;
+      background: rgba(26, 20, 16, 0.92);
+      backdrop-filter: blur(8px);
+    }
+
+    .nav-logo {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 1.2rem;
+      color: #fff;
+      letter-spacing: 0.05em;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: rgba(255,255,255,0.75);
+      text-decoration: none;
+      font-size: 0.85rem;
+      letter-spacing: 0.08em;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--orange-light); }
+
+    /* ======= HERO ======= */
+    .hero {
+      min-height: 100vh;
+      background: var(--dark);
+      display: flex;
+      align-items: center;
+      padding: 8rem 2.5rem 5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -200px; right: -200px;
+      width: 700px; height: 700px;
+      background: radial-gradient(circle, rgba(232,98,26,0.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: -100px; left: -100px;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(232,98,26,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-inner {
+      max-width: 900px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-label {
+      display: inline-block;
+      background: var(--orange);
+      color: #fff;
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      padding: 0.35rem 1rem;
+      border-radius: 2px;
+      margin-bottom: 2rem;
+    }
+
+    .hero-title {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      color: #fff;
+      line-height: 1.4;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-title span { color: var(--orange-light); }
+
+    .hero-sub {
+      font-size: clamp(1rem, 2vw, 1.2rem);
+      color: rgba(255,255,255,0.6);
+      max-width: 560px;
+      margin-bottom: 3rem;
+    }
+
+    .hero-name {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 1rem;
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 0.2em;
+      margin-bottom: 0.4rem;
+    }
+
+    .hero-role {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.35);
+      letter-spacing: 0.1em;
+    }
+
+    .hero-cta {
+      display: inline-block;
+      background: var(--orange);
+      color: #fff;
+      text-decoration: none;
+      padding: 1rem 2.5rem;
+      border-radius: 4px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      transition: background 0.2s, transform 0.2s;
+      margin-top: 2.5rem;
+    }
+
+    .hero-cta:hover { background: var(--orange-light); transform: translateY(-2px); }
+
+    /* ======= SECTION BASE ======= */
+    section { padding: 6rem 2.5rem; }
+
+    .section-inner { max-width: 880px; margin: 0 auto; }
+
+    .section-label {
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      color: var(--orange);
+      text-transform: uppercase;
+      margin-bottom: 0.8rem;
+      font-weight: 700;
+    }
+
+    .section-title {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      line-height: 1.5;
+      margin-bottom: 2.5rem;
+    }
+
+    /* ======= ABOUT ======= */
+    .about { background: var(--cream); }
+
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+    }
+
+    .about-text p {
+      color: var(--text-muted);
+      margin-bottom: 1.2rem;
+      font-size: 0.95rem;
+    }
+
+    .about-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      margin-top: 1.5rem;
+    }
+
+    .tag {
+      background: #fff;
+      border: 1px solid var(--border);
+      padding: 0.4rem 1rem;
+      border-radius: 100px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .about-card {
+      background: var(--dark);
+      border-radius: 12px;
+      padding: 2.5rem;
+      color: #fff;
+    }
+
+    .about-card-name {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .about-card-role {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 0.1em;
+      margin-bottom: 2rem;
+    }
+
+    .about-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding-bottom: 1.2rem;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .stat-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+    .stat-icon {
+      width: 36px; height: 36px;
+      background: rgba(232,98,26,0.15);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    .stat-text {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.7);
+    }
+
+    /* ======= SERVICES ======= */
+    .services { background: #fff; }
+
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+
+    .service-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 2rem 1.8rem;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .service-card:hover {
+      border-color: var(--orange);
+      transform: translateY(-4px);
+    }
+
+    .service-icon {
+      font-size: 2rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .service-title {
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .service-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.8;
+    }
+
+    /* ======= ACHIEVEMENTS ======= */
+    .achievements { background: var(--cream); }
+
+    .achievements-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+    }
+
+    .achievement-card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 2rem;
+      display: flex;
+      gap: 1.2rem;
+      align-items: flex-start;
+    }
+
+    .achievement-num {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 2.5rem;
+      color: var(--orange);
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .achievement-body {}
+
+    .achievement-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .achievement-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    /* ======= PHILOSOPHY ======= */
+    .philosophy { background: var(--dark); }
+
+    .philosophy .section-title { color: #fff; }
+    .philosophy .section-label { color: var(--orange-light); }
+
+    .philosophy-quote {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(1.3rem, 3vw, 2rem);
+      color: #fff;
+      line-height: 1.9;
+      border-left: 3px solid var(--orange);
+      padding-left: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .philosophy-sub {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.5);
+      max-width: 560px;
+    }
+
+    /* ======= CONTACT ======= */
+    .contact { background: #fff; text-align: center; }
+
+    .contact .section-inner { max-width: 640px; }
+
+    .contact-title {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      margin-bottom: 1rem;
+    }
+
+    .contact-desc {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 2.5rem;
+    }
+
+    .contact-btn {
+      display: inline-block;
+      background: var(--orange);
+      color: #fff;
+      text-decoration: none;
+      padding: 1.1rem 3rem;
+      border-radius: 4px;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      transition: background 0.2s, transform 0.2s;
+    }
+
+    .contact-btn:hover { background: var(--orange-light); transform: translateY(-2px); }
+
+    /* ======= FOOTER ======= */
+    footer {
+      background: var(--dark);
+      color: rgba(255,255,255,0.4);
+      text-align: center;
+      padding: 2rem;
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+    }
+
+    /* ======= RESPONSIVE ======= */
+    @media (max-width: 768px) {
+      nav { padding: 1rem 1.5rem; }
+      .nav-links { display: none; }
+      section { padding: 4rem 1.5rem; }
+
+      .about-grid { grid-template-columns: 1fr; gap: 2rem; }
+      .services-grid { grid-template-columns: 1fr; }
+      .achievements-grid { grid-template-columns: 1fr; }
+
+      .hero { padding: 7rem 1.5rem 4rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-logo">ルウ王子</div>
+    <ul class="nav-links">
+      <li><a href="#about">About</a></li>
+      <li><a href="#services">Services</a></li>
+      <li><a href="#achievements">実績</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-label">AIコンサルタント × カレー経営者</div>
+      <h1 class="hero-title">
+        AIで、経営を変える。<br />
+        カレーで、<span>地域を変える。</span>
+      </h1>
+      <p class="hero-sub">
+        宮崎・都城を拠点に、現場を知る経営者の目線でAI活用を支援する。
+        難しい技術の話ではなく、売上・利益・集客に直結するAI導入を。
+      </p>
+      <div class="hero-name">ルウ王子</div>
+      <div class="hero-role">Ruu Prince — AI Consultant / Curry Club Ruu Owner</div>
+      <a href="#contact" class="hero-cta">お問い合わせ・相談はこちら</a>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="about" id="about">
+    <div class="section-inner">
+      <div class="about-grid">
+        <div class="about-text">
+          <div class="section-label">About</div>
+          <h2 class="section-title">現場を知る経営者が、<br />AIで一緒に伴走します。</h2>
+          <p>
+            宮崎県都城市でカレー倶楽部ルウを経営しながら、AIコンサルタントとして中小企業・飲食店・個人事業主のAI活用を支援しています。
+          </p>
+          <p>
+            技術者ではなく、現場で数字と向き合ってきた実務家として「使えるAI」を届けることを信条にしています。
+          </p>
+          <p>
+            SNS発信・メディア露出・地域ブランディングを掛け合わせた独自のスタイルで、AIを「仕組み」に変えます。
+          </p>
+          <div class="about-tags">
+            <span class="tag">AI活用支援</span>
+            <span class="tag">経営改善</span>
+            <span class="tag">集客・販促</span>
+            <span class="tag">宮崎・都城</span>
+            <span class="tag">飲食経営</span>
+            <span class="tag">ブランディング</span>
+          </div>
+        </div>
+        <div class="about-card">
+          <div class="about-card-name">ルウ王子</div>
+          <div class="about-card-role">AIコンサルタント / カレー倶楽部ルウ オーナー</div>
+          <div class="about-stat">
+            <div class="stat-item">
+              <div class="stat-icon">🤖</div>
+              <div class="stat-text">AIコンサルタントとして中小企業・個人事業主を支援</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-icon">🍛</div>
+              <div class="stat-text">カレー倶楽部ルウ オーナー（都城本店・福岡渡辺通店）</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-icon">📍</div>
+              <div class="stat-text">宮崎県都城市を拠点に活動</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-icon">📺</div>
+              <div class="stat-text">テレビ・新聞・SNSでの露出実績多数</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICES -->
+  <section class="services" id="services">
+    <div class="section-inner">
+      <div class="section-label">Services</div>
+      <h2 class="section-title">提供できること</h2>
+      <div class="services-grid">
+        <div class="service-card">
+          <div class="service-icon">🤖</div>
+          <div class="service-title">AI活用コンサルティング</div>
+          <p class="service-desc">
+            業務効率化・集客・コンテンツ自動化など、現場で使えるAI導入を伴走支援。
+            経営者目線で「売上・利益に直結する使い方」を設計します。
+          </p>
+        </div>
+        <div class="service-card">
+          <div class="service-icon">🎤</div>
+          <div class="service-title">AI研修・セミナー</div>
+          <p class="service-desc">
+            経営者・スタッフ向けのAI活用研修。難しい技術論ではなく、今日から使える実践的な内容でお届けします。
+          </p>
+        </div>
+        <div class="service-card">
+          <div class="service-icon">📈</div>
+          <div class="service-title">経営・集客改善支援</div>
+          <p class="service-desc">
+            SNS発信・メディア活用・地域ブランディングを組み合わせた集客改善。
+            飲食・小売・サービス業に強みを持ちます。
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACHIEVEMENTS -->
+  <section class="achievements" id="achievements">
+    <div class="section-inner">
+      <div class="section-label">Achievements</div>
+      <h2 class="section-title">実績・メディア掲載</h2>
+      <div class="achievements-grid">
+        <div class="achievement-card">
+          <div class="achievement-num">5位</div>
+          <div class="achievement-body">
+            <div class="achievement-title">UMK宮崎カレーランキング 県内5位</div>
+            <div class="achievement-desc">都城市内で唯一のランクイン。地域を代表するカレーブランドとして認知を獲得。</div>
+          </div>
+        </div>
+        <div class="achievement-card">
+          <div class="achievement-num">📺</div>
+          <div class="achievement-body">
+            <div class="achievement-title">テレビ・新聞・SNSでの露出</div>
+            <div class="achievement-desc">地元メディアを中心に複数回の取材・掲載実績。ブランドの信頼性を醸成。</div>
+          </div>
+        </div>
+        <div class="achievement-card">
+          <div class="achievement-num">2店</div>
+          <div class="achievement-body">
+            <div class="achievement-title">カレー倶楽部ルウ 2店舗展開</div>
+            <div class="achievement-desc">都城本店・福岡渡辺通店の2拠点で運営。地域を越えたブランド展開を実現。</div>
+          </div>
+        </div>
+        <div class="achievement-card">
+          <div class="achievement-num">🤝</div>
+          <div class="achievement-body">
+            <div class="achievement-title">複数クライアントのAI支援実績</div>
+            <div class="achievement-desc">中小企業・飲食店・個人事業主へのAI導入・活用支援を継続展開中。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PHILOSOPHY -->
+  <section class="philosophy">
+    <div class="section-inner">
+      <div class="section-label">Philosophy</div>
+      <blockquote class="philosophy-quote">
+        「難しいAIの話より、<br />
+        明日の売上が変わるAIの使い方を。」
+      </blockquote>
+      <p class="philosophy-sub">
+        AIは手段です。目的は売上改善・業務軽減・集客強化・ブランド強化。
+        現場で使えないAIに意味はない。ルウ王子は常にその信念で動いています。
+      </p>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section class="contact" id="contact">
+    <div class="section-inner">
+      <div class="section-label">Contact</div>
+      <h2 class="contact-title">まずは気軽にご相談ください</h2>
+      <p class="contact-desc">
+        AI活用の相談、セミナー依頼、取材・メディア掲載のお問い合わせなど、<br />
+        お気軽にご連絡ください。
+      </p>
+      <a href="mailto:info@example.com" class="contact-btn">お問い合わせはこちら</a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>© 2026 ルウ王子 / Ruu Prince. All rights reserved.</p>
+  </footer>
+
+</body>
+</html>
