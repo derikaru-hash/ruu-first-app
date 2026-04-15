@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>篤農家サービス AI活用研修会 | ルウ王子</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif; color: #1a1a1a; background: #fff; }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, #1a4a1a 0%, #2d6e2d 50%, #1a4a1a 100%);
+    color: #fff;
+    padding: 80px 20px 60px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,200,0,0.08) 0%, transparent 60%);
+  }
+  .hero-tag {
+    display: inline-block;
+    background: #e8b800;
+    color: #1a1a1a;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 6px 20px;
+    border-radius: 20px;
+    margin-bottom: 24px;
+    letter-spacing: 1px;
+  }
+  .hero h1 {
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 900;
+    line-height: 1.3;
+    margin-bottom: 16px;
+    letter-spacing: -0.5px;
+  }
+  .hero h1 span { color: #e8b800; }
+  .hero p {
+    font-size: clamp(15px, 2.5vw, 18px);
+    opacity: 0.9;
+    margin-bottom: 40px;
+    line-height: 1.8;
+  }
+  .hero-cta {
+    display: inline-block;
+    background: #e8b800;
+    color: #1a1a1a;
+    font-size: 18px;
+    font-weight: 800;
+    padding: 18px 50px;
+    border-radius: 50px;
+    text-decoration: none;
+    box-shadow: 0 8px 30px rgba(232,184,0,0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .hero-cta:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(232,184,0,0.5); }
+  .hero-note { margin-top: 16px; font-size: 13px; opacity: 0.7; }
+
+  /* Info bar */
+  .info-bar {
+    background: #f4f7f4;
+    padding: 30px 20px;
+    border-top: 3px solid #2d6e2d;
+  }
+  .info-bar-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+  }
+  .info-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fff;
+    padding: 14px 24px;
+    border-radius: 12px;
+    border: 1px solid #e0e8e0;
+    min-width: 200px;
+  }
+  .info-icon { font-size: 22px; }
+  .info-label { font-size: 11px; color: #666; }
+  .info-value { font-size: 15px; font-weight: 700; color: #1a4a1a; }
+
+  /* Section */
+  .section { padding: 70px 20px; }
+  .section-inner { max-width: 900px; margin: 0 auto; }
+  .section-label {
+    display: inline-block;
+    background: #2d6e2d;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 16px;
+    border-radius: 4px;
+    margin-bottom: 16px;
+    letter-spacing: 1px;
+  }
+  .section-title {
+    font-size: clamp(22px, 4vw, 36px);
+    font-weight: 900;
+    line-height: 1.4;
+    margin-bottom: 32px;
+    color: #1a4a1a;
+  }
+  .section-title span { color: #e8b800; border-bottom: 3px solid #e8b800; }
+
+  /* Pain points */
+  .pain-bg { background: #fff8e1; }
+  .pain-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+  .pain-item {
+    background: #fff;
+    padding: 20px 24px;
+    border-radius: 12px;
+    border-left: 4px solid #e8b800;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  .pain-item::before { content: '😟 '; font-size: 18px; }
+
+  /* Content */
+  .content-list { display: grid; gap: 20px; }
+  .content-item {
+    display: flex;
+    gap: 20px;
+    background: #f4f7f4;
+    padding: 24px;
+    border-radius: 14px;
+    align-items: flex-start;
+  }
+  .content-num {
+    background: #2d6e2d;
+    color: #fff;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 900;
+    flex-shrink: 0;
+  }
+  .content-text h3 { font-size: 17px; font-weight: 800; margin-bottom: 6px; color: #1a4a1a; }
+  .content-text p { font-size: 14px; color: #555; line-height: 1.7; }
+
+  /* Point */
+  .point-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+  .point-card {
+    background: #1a4a1a;
+    color: #fff;
+    padding: 30px 20px;
+    border-radius: 16px;
+    text-align: center;
+  }
+  .point-card .icon { font-size: 36px; margin-bottom: 12px; }
+  .point-card h3 { font-size: 16px; font-weight: 800; margin-bottom: 8px; color: #e8b800; }
+  .point-card p { font-size: 13px; opacity: 0.85; line-height: 1.7; }
+
+  /* Profile */
+  .profile-bg { background: #f4f7f4; }
+  .profile-inner {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .profile-avatar {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2d6e2d, #1a4a1a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 60px;
+    flex-shrink: 0;
+  }
+  .profile-content h3 { font-size: 22px; font-weight: 900; margin-bottom: 4px; color: #1a4a1a; }
+  .profile-content .role { font-size: 13px; color: #2d6e2d; font-weight: 700; margin-bottom: 16px; }
+  .profile-content p { font-size: 14px; line-height: 1.8; color: #444; margin-bottom: 12px; }
+  .profile-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .profile-tag {
+    background: #2d6e2d;
+    color: #fff;
+    font-size: 12px;
+    padding: 4px 14px;
+    border-radius: 20px;
+  }
+
+  /* Overview */
+  .overview-table { width: 100%; border-collapse: collapse; }
+  .overview-table tr { border-bottom: 1px solid #e8ede8; }
+  .overview-table th {
+    background: #1a4a1a;
+    color: #fff;
+    padding: 14px 20px;
+    text-align: left;
+    font-size: 14px;
+    width: 120px;
+    vertical-align: top;
+  }
+  .overview-table td { padding: 14px 20px; font-size: 15px; line-height: 1.7; }
+  .overview-table tr:nth-child(even) td { background: #f9fbf9; }
+  .capacity-badge {
+    display: inline-block;
+    background: #e74c3c;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 4px;
+    margin-left: 8px;
+  }
+
+  /* CTA Bottom */
+  .cta-bottom {
+    background: linear-gradient(135deg, #1a4a1a, #2d6e2d);
+    color: #fff;
+    padding: 70px 20px;
+    text-align: center;
+  }
+  .cta-bottom h2 { font-size: clamp(22px, 4vw, 36px); font-weight: 900; margin-bottom: 16px; }
+  .cta-bottom h2 span { color: #e8b800; }
+  .cta-bottom p { font-size: 16px; opacity: 0.85; margin-bottom: 36px; line-height: 1.8; }
+  .cta-btn {
+    display: inline-block;
+    background: #e8b800;
+    color: #1a1a1a;
+    font-size: 18px;
+    font-weight: 800;
+    padding: 20px 60px;
+    border-radius: 50px;
+    text-decoration: none;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  }
+
+  /* Footer */
+  footer {
+    background: #111;
+    color: #888;
+    text-align: center;
+    padding: 30px 20px;
+    font-size: 13px;
+  }
+
+  @media (max-width: 600px) {
+    .profile-inner { flex-direction: column; align-items: center; text-align: center; }
+    .profile-tags { justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-tag">📢 参加者募集中 ｜ 定員40名</div>
+  <h1>AIって、難しそう？<br>そんなあなたのための<br><span>AI活用研修会</span></h1>
+  <p>宮崎の農業・ふるさと納税事業者向け<br>初心者でも安心の実践型AIセミナー</p>
+  <a href="#entry" class="hero-cta">無料で参加申し込みする →</a>
+  <p class="hero-note">令和8年5月26日（火）宮崎ステーション会議室1</p>
+</section>
+
+<!-- Info Bar -->
+<div class="info-bar">
+  <div class="info-bar-inner">
+    <div class="info-item">
+      <span class="info-icon">📅</span>
+      <div>
+        <div class="info-label">開催日</div>
+        <div class="info-value">2026年5月26日（火）</div>
+      </div>
+    </div>
+    <div class="info-item">
+      <span class="info-icon">🕒</span>
+      <div>
+        <div class="info-label">時間</div>
+        <div class="info-value">15:00〜（約2時間）</div>
+      </div>
+    </div>
+    <div class="info-item">
+      <span class="info-icon">📍</span>
+      <div>
+        <div class="info-label">会場</div>
+        <div class="info-value">宮崎ステーション 会議室1</div>
+      </div>
+    </div>
+    <div class="info-item">
+      <span class="info-icon">👥</span>
+      <div>
+        <div class="info-label">定員</div>
+        <div class="info-value">40名（先着）</div>
+      </div>
+    </div>
+    <div class="info-item">
+      <span class="info-icon">💴</span>
+      <div>
+        <div class="info-label">参加費</div>
+        <div class="info-value">無料</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Pain Points -->
+<section class="section pain-bg">
+  <div class="section-inner">
+    <div class="section-label">PAIN POINT</div>
+    <h2 class="section-title">こんなお悩み、<span>ありませんか？</span></h2>
+    <div class="pain-list">
+      <div class="pain-item">AIって聞くけど、自分の仕事に使えるのか全然わからない</div>
+      <div class="pain-item">ChatGPTを試したけど、何に使えばいいか結局わからなかった</div>
+      <div class="pain-item">ITが苦手だから、AIは自分には関係ないと思っていた</div>
+      <div class="pain-item">ふるさと納税や農業事務で毎日時間を取られている</div>
+      <div class="pain-item">若い人に任せようにも、社内にAIを教えられる人がいない</div>
+      <div class="pain-item">AIを使い始めたいけど、どこから手をつければいいか不安</div>
+    </div>
+  </div>
+</section>
+
+<!-- Content -->
+<section class="section">
+  <div class="section-inner">
+    <div class="section-label">PROGRAM</div>
+    <h2 class="section-title">この研修で<span>学べること</span></h2>
+    <div class="content-list">
+      <div class="content-item">
+        <div class="content-num">1</div>
+        <div class="content-text">
+          <h3>「AIってなんだ？」をゼロから丁寧に解説</h3>
+          <p>ChatGPT・Claude・Geminiなど、よく聞くAIツールの違いと、農業事務やふるさと納税業務に使える場面を具体的に紹介します。難しい専門用語は一切使いません。</p>
+        </div>
+      </div>
+      <div class="content-item">
+        <div class="content-num">2</div>
+        <div class="content-text">
+          <h3>農業・ふるさと納税に特化したAI活用術</h3>
+          <p>「商品説明文をAIで書く」「返礼品の問い合わせ対応を自動化する」「SNS投稿をAIに任せる」など、明日から使える実践的な活用事例をデモで見せます。</p>
+        </div>
+      </div>
+      <div class="content-item">
+        <div class="content-num">3</div>
+        <div class="content-text">
+          <h3>その場で実際に触れる体験型セッション</h3>
+          <p>スマートフォン1台あれば参加できます。自分でAIに話しかけて、どんな答えが返ってくるかを体験。「使えそう！」という感覚を持ち帰ってもらうことが目標です。</p>
+        </div>
+      </div>
+      <div class="content-item">
+        <div class="content-num">4</div>
+        <div class="content-text">
+          <h3>他社事例・宮崎の事業者の活用例も紹介</h3>
+          <p>宮崎県内外の農業・飲食・小売業でのAI導入事例を紹介。「うちでもできそう」と思えるリアルな事例ばかりです。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Points -->
+<section class="section" style="background: #f4f7f4;">
+  <div class="section-inner">
+    <div class="section-label">FEATURE</div>
+    <h2 class="section-title">この研修が<span>選ばれる理由</span></h2>
+    <div class="point-grid">
+      <div class="point-card">
+        <div class="icon">🌱</div>
+        <h3>初心者歓迎</h3>
+        <p>AIを触ったことがない方でも安心。ゼロから丁寧に説明します</p>
+      </div>
+      <div class="point-card">
+        <div class="icon">🎯</div>
+        <h3>業務直結の内容</h3>
+        <p>農業・ふるさと納税事業に特化した実践的なカリキュラム</p>
+      </div>
+      <div class="point-card">
+        <div class="icon">💬</div>
+        <h3>現場経営者が講師</h3>
+        <p>自らカレー店経営・AIコンサルを掛け持ちする実践者が伝授</p>
+      </div>
+      <div class="point-card">
+        <div class="icon">👥</div>
+        <h3>少人数・アットホーム</h3>
+        <p>定員40名の少人数制。質問しやすい雰囲気を大切にします</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Profile -->
+<section class="section profile-bg">
+  <div class="section-inner">
+    <div class="section-label">LECTURER</div>
+    <h2 class="section-title">講師<span>プロフィール</span></h2>
+    <div class="profile-inner">
+      <div class="profile-avatar">👑</div>
+      <div class="profile-content">
+        <h3>ルウ王子（日置 純彦）</h3>
+        <p class="role">AIコンサルタント ／ カレー倶楽部ルウ オーナー ／ 宮崎県都城市在住</p>
+        <p>宮崎県都城市を拠点に、中小企業・農業事業者・飲食店へのAI活用支援を行うコンサルタント。自らもカレー倶楽部ルウを経営しながら、店舗運営にAIを取り入れる実証実験を継続中。</p>
+        <p>「難しいAIを、現場で使えるレベルに落とし込む」をテーマに、商工会議所・農業団体・飲食業界など宮崎県内各所での講演・研修実績多数。参加者アンケートでは「わかりやすい」「明日から使えそう」という声が多数。</p>
+        <div class="profile-tags">
+          <span class="profile-tag">AIコンサルタント</span>
+          <span class="profile-tag">飲食店経営者</span>
+          <span class="profile-tag">宮崎県都城市</span>
+          <span class="profile-tag">中小企業AI支援</span>
+          <span class="profile-tag">ふるさと納税×AI</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Overview -->
+<section class="section">
+  <div class="section-inner">
+    <div class="section-label">OVERVIEW</div>
+    <h2 class="section-title">開催<span>概要</span></h2>
+    <table class="overview-table">
+      <tr>
+        <th>日時</th>
+        <td>令和8年（2026年）5月26日（火）<br>午後15:00〜17:00頃（約2時間）</td>
+      </tr>
+      <tr>
+        <th>会場</th>
+        <td>宮崎ステーション 会議室1（予定）<br><small style="color:#888">※詳細は参加確定後にご案内します</small></td>
+      </tr>
+      <tr>
+        <th>定員</th>
+        <td>40名<span class="capacity-badge">先着順</span><br><small style="color:#888">定員に達し次第、締め切りとなります</small></td>
+      </tr>
+      <tr>
+        <th>参加費</th>
+        <td><strong style="color:#1a4a1a; font-size:18px;">無料</strong></td>
+      </tr>
+      <tr>
+        <th>対象</th>
+        <td>宮崎県内の農業事業者・ふるさと納税関連事業者・農業サービス企業の方。AI初心者歓迎。</td>
+      </tr>
+      <tr>
+        <th>持ち物</th>
+        <td>スマートフォン（できればWi-Fiに接続可能なもの）</td>
+      </tr>
+      <tr>
+        <th>主催</th>
+        <td>シフトプラス ／ 協力：ルウ王子（日置純彦）</td>
+      </tr>
+    </table>
+  </div>
+</section>
+
+<!-- CTA Bottom -->
+<section class="cta-bottom" id="entry">
+  <h2>定員40名。<span>お早めにどうぞ。</span></h2>
+  <p>AIを「難しいもの」から「使えるもの」に変える2時間。<br>宮崎の農業・ふるさと納税事業者のために作った、実践型研修です。</p>
+  <a href="#" class="cta-btn">参加申し込みはこちら →</a>
+  <p style="margin-top: 20px; font-size: 13px; opacity: 0.7;">お問い合わせ：derikaru@gmail.com</p>
+</section>
+
+<footer>
+  <p>© 2026 ルウ王子（日置純彦）｜宮崎県都城市</p>
+</footer>
+
+</body>
+</html>
