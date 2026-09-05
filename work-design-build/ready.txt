@@ -1,0 +1,7 @@
+version=1.0.0
+sha256=2b36f515fa4f892ec2db672081a032d81edf6161342ad1d2ca19dc3bfa76932a
+raw_bytes=117839
+encoded_chars=44840
+parts=7
+scope=work-design and api/work-design-ai.js only
+live_ai=disabled unless all required server environment variables are configured
