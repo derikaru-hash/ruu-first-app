@@ -1,0 +1,81 @@
+name: Build Restaurant Suite
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - restaurant-suite-build/ready.txt
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: restaurant-suite-demo-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Assemble and verify comprehensive demo
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, hashlib, lzma, re, subprocess
+          root = Path('restaurant-suite-build')
+          checks = [
+              '716bf171e776a32b4bc085bfafef52a67f9a130b8e72c8816fbc6aa6c0576b55',
+              '82c3732ecbbafa6f3c33425ab5456431dcc99e5657d75633f7e9827964549dc3',
+              'efa4aa5ec10e598a1ab2ac8b094cf3258d65bec7a792838f5a70fd84f735039a',
+              '8fd21d2e7e5ed35fcb5b78f37899ee90cf38b6bbb163de0eca5f5b62bd98f19a',
+              '07fb39bf7d18b4128eea108501eba88cb5b1b20e9accdda64c7a3b78ab814e6c',
+              'da85d612b21b06ae530bd35996ede6ccc84c3e3be739e2216cf126d736d1fffb',
+              '438bfe30ff4b1330990f8ad724703418aeb2cd18f8e87a3826cac05688554784',
+              '5f6591e854e7912b3ba1afabfbc391f57af3e263852287fcf3ca49b81cdafd9c'
+          ]
+          parts = []
+          for i, expected in enumerate(checks):
+              path = root / ('part-%02d.b64' % i)
+              encoded = path.read_text().strip()
+              assert hashlib.sha256(encoded.encode()).hexdigest() == expected, 'Segment checksum mismatch: ' + str(path)
+              parts.append(encoded)
+          raw = lzma.decompress(base64.b64decode(''.join(parts), validate=True), memlimit=128*1024*1024)
+          expected = 'ed6c3dfa141642bda6b4ee3aebc5b65f1dbe038941b4d148045221c38d96c272'
+          assert hashlib.sha256(raw).hexdigest() == expected, 'HTML checksum mismatch'
+          assert len(raw) == 158794, 'Unexpected document size'
+          html = raw.decode('utf-8')
+          for title in ['飲食経営OS', '予約・席管理', '全店連携・ヘルプ', 'みんなの広場']:
+              assert title in html, 'Missing application section: ' + title
+          target = Path('restaurant-suite')
+          target.mkdir(exist_ok=True)
+          (target / 'index.html').write_bytes(raw)
+          scripts = re.findall(r'<script[^>]*>(.*?)</script>', html, re.S)
+          assert scripts, 'Application script missing'
+          for i, script in enumerate(scripts):
+              temporary = Path('/tmp') / ('restaurant-suite-script-%d.js' % i)
+              temporary.write_text(script)
+              subprocess.run(['node', '--check', str(temporary)], check=True)
+          print('Verified restaurant suite:', len(raw), 'bytes;', expected)
+          PY
+
+      - name: Publish standalone suite without modifying existing demos
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add restaurant-suite/index.html
+          if git diff --cached --quiet; then
+            echo "Suite is already current"
+            exit 0
+          fi
+          git commit -m "Publish comprehensive restaurant suite with service, back office and team coordination"
+          git pull --rebase origin main
+          git push origin HEAD:main
