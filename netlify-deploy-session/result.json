@@ -1,10 +1,130 @@
 {
   "siteId": "bed7a899-7484-4a86-8c2a-0f5b786fca91",
   "deployId": "6a9c193686e46ce007c0eab5",
-  "buildId": "6a9c193686e46ce007c0eab3",
   "sourceCommit": "9b45278afce20e023b1c671d7b0c5694d6162041",
-  "url": "https://ruu-work-design.netlify.app",
-  "state": "submitted",
+  "url": "https://ruu-work-design.netlify.app/",
+  "state": "ready",
+  "publicUI": "verified",
+  "browser": "Chromium",
+  "verifiedAt": "2026-09-05T13:31:49.061Z",
+  "checks": [
+    "Public HTTPS entry returns 200",
+    "勤務表をアップロード is visible",
+    "業務マニュアルを入れる is visible",
+    "今日の仕事を記録する is visible",
+    "Version 1.1.0 is served",
+    "AI is correctly labelled unconnected",
+    "shift.xlsx real file read and confirmation form opens",
+    "manual.docx real file read and confirmation form opens",
+    "manual.pdf real file read and confirmation form opens",
+    "CSV file mapping form opens",
+    "Sample intake persists on the public origin",
+    "390px phone layout has no horizontal overflow",
+    "No script exceptions",
+    "All JavaScript, CSS and PDF worker assets match the verified source"
+  ],
+  "assets": [
+    {
+      "name": "index.html",
+      "status": 200,
+      "url": "https://ruu-work-design.netlify.app/index.html",
+      "bytes": 3796,
+      "expectedBytes": 3076,
+      "exact": false,
+      "type": "text/html; charset=UTF-8",
+      "sha256": "7926b572a6d2d5c4aaccee12352ca2fba32d5d912fbcb3630ab45a52d0f7aeb4"
+    },
+    {
+      "name": "app.js",
+      "status": 200,
+      "url": "https://ruu-work-design.netlify.app/app.js",
+      "bytes": 50021,
+      "expectedBytes": 50021,
+      "exact": true,
+      "type": "application/javascript; charset=UTF-8",
+      "sha256": "c25ced7fcd1dc71125c663b5f05126d68d46de615a32f4a719595192f6697a08"
+    },
+    {
+      "name": "engine.js",
+      "status": 200,
+      "url": "https://ruu-work-design.netlify.app/engine.js",
+      "bytes": 16783,
+      "expectedBytes": 16783,
+      "exact": true,
+      "type": "application/javascript; charset=UTF-8",
+      "sha256": "1c0a8400b67629c07d919efcc2ccac15f9e13e48a3e1908c63c119895a2b64c4"
+    },
+    {
+      "name": "style.css",
+      "status": 200,
+      "url": "https://ruu-work-design.netlify.app/style.css",
+      "bytes": 17034,
+      "expectedBytes": 17034,
+      "exact": true,
+      "type": "text/css; charset=UTF-8",
+      "sha256": "877e58a56f981f030d381c3cb259434476c9b101c1665c5ce062abdae6398c6d"
+    },
+    {
+      "name": "reader.js",
+      "status": 200,
+      "url": "https://ruu-work-design.netlify.app/reader.js",
+      "bytes": 10506,
+      "expectedBytes": 10506,
+      "exact": true,
+      "type": "application/javascript; charset=UTF-8",
+      "sha256": "3e8b10b20049b3782ba3a9ed1d7646fb216ca741c2a734f94ea074466a4ee72c"
+    },
+    {
+      "name": "intake.js",
+      "status": 200,
+      "url": "https://ruu-work-design.netlify.app/intake.js",
+      "bytes": 33112,
+      "expectedBytes": 33112,
+      "exact": true,
+      "type": "application/javascript; charset=UTF-8",
+      "sha256": "e4d5c7f55a65e6d496ec96c36f8ce68d20b88b5441cf3dc5c421053f4d10ae6c"
+    },
+    {
+      "name": "intake-core.js",
+      "status": 200,
+      "url": "https://ruu-work-design.netlify.app/intake-core.js",
+      "bytes": 8823,
+      "expectedBytes": 8823,
+      "exact": true,
+      "type": "application/javascript; charset=UTF-8",
+      "sha256": "7ad337a37e7012feb31e8aef43ea7f41ce8052216ca2ab8343aba1678724619e"
+    },
+    {
+      "name": "intake.css",
+      "status": 200,
+      "url": "https://ruu-work-design.netlify.app/intake.css",
+      "bytes": 5918,
+      "expectedBytes": 5918,
+      "exact": true,
+      "type": "text/css; charset=UTF-8",
+      "sha256": "fb65a4c03ddb09c21f41217bcfe45c6add9a735be1bb67c2cd90b98a64a19dd3"
+    },
+    {
+      "name": "vendor/pdf.min.mjs",
+      "status": 200,
+      "url": "https://ruu-work-design.netlify.app/vendor/pdf.min.mjs",
+      "bytes": 458705,
+      "expectedBytes": 458705,
+      "exact": true,
+      "type": "application/javascript; charset=UTF-8",
+      "sha256": "f80490490320511e5df18c580b9edd6b5db8058dceebaf6f161992e0a964b9e2"
+    },
+    {
+      "name": "vendor/pdf.worker.min.mjs",
+      "status": 200,
+      "url": "https://ruu-work-design.netlify.app/vendor/pdf.worker.min.mjs",
+      "bytes": 1265413,
+      "expectedBytes": 1265413,
+      "exact": true,
+      "type": "application/javascript; charset=UTF-8",
+      "sha256": "8ab0e5e30031b4a06ecfddd5ae9562f0227f830ee7ec9ed1a968b134243d2386"
+    }
+  ],
   "ai": "not connected",
-  "submittedAt": "2026-09-05T13:29:26.991Z"
+  "note": "Public upload is complete. This run checks the real production origin, not an in-memory page."
 }
