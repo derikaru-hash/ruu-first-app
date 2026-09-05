@@ -1,0 +1,73 @@
+{
+  "version": "1.0.0",
+  "date": "2026-09-05",
+  "engine": {
+    "passed": 75,
+    "failed": 0
+  },
+  "api_stubbed": {
+    "passed": 25,
+    "failed": 0
+  },
+  "chromium_adapters": {
+    "suite": "Chromium with storage/network adapters",
+    "passed": 49,
+    "failed": 0,
+    "checks": [
+      "initial 8 tasks",
+      "AI clearly offline",
+      "saved minute forecast",
+      "remaining mismatch",
+      "remote mismatch remains",
+      "onsite matching closes",
+      "scenario not in saved staff",
+      "one recruiting role",
+      "not vacancy publishing",
+      "five lanes",
+      "eight classified tasks",
+      "plan exclusion recalculates",
+      "unsafe AI zero review visibly stopped",
+      "required removal stopped",
+      "profile persisted adapter",
+      "reload with adapter",
+      "unknown stops calculation",
+      "unknown draft survives reload",
+      "new task saves",
+      "task deletes",
+      "worker capacity changed",
+      "observation saved",
+      "measurement does not rewrite tasks",
+      "approval requires checks",
+      "approval recorded",
+      "report approval",
+      "change invalidates approval",
+      "old approval preserved",
+      "report download exists",
+      "JSON download valid",
+      "history opens original",
+      "no page overflow 390 view 0",
+      "no page overflow 390 view 1",
+      "no page overflow 390 view 2",
+      "no page overflow 390 view 3",
+      "no page overflow 390 view 4",
+      "no page overflow 390 view 5",
+      "no page overflow 375 view 0",
+      "no page overflow 375 view 1",
+      "no page overflow 375 view 2",
+      "no page overflow 375 view 3",
+      "no page overflow 375 view 4",
+      "no page overflow 375 view 5",
+      "offline AI cannot send",
+      "no POST calls while offline",
+      "deletion isolated",
+      "own storage deleted",
+      "storage failure visible",
+      "no JS errors"
+    ]
+  },
+  "limitations": [
+    "Public URL not directly checked in the restricted environment.",
+    "UI network and localStorage use test adapters, not real browser persistence.",
+    "OpenAI and Redis calls mocked; real AI not activated."
+  ]
+}
