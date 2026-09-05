@@ -1,0 +1,7 @@
+RUU strategy transfer lab v1.0
+Source SHA256: 24cfda36194421eb2baaf55d745c72b416468915eb21c32056d2467581730d63
+Source bytes: 101188
+Local verification: 99 automated checks passed in Chromium.
+Persistence tests use a test-only localStorage adapter because local navigation is restricted in the authoring environment.
+No live AI, search, authentication, server database, external submissions or purchases.
+Destination: win-lab/index.html only. Existing demo pages are not modified.
