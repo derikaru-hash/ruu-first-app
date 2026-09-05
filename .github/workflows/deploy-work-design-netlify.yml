@@ -1,0 +1,108 @@
+name: Publish Work Design intake to Netlify
+on:
+  push:
+    branches: [netlify-publish-work-design-20260905]
+    paths: [.github/workflows/deploy-work-design-netlify.yml]
+permissions:
+  contents: write
+concurrency:
+  group: ruu-work-design-netlify-publication
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 9b45278afce20e023b1c671d7b0c5694d6162041
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Publish verified app using ephemeral encrypted deployment authorization
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'JS'
+          const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto'),cp=require('node:child_process');
+          const repo='derikaru-hash/ruu-first-app',branch='netlify-publish-work-design-20260905',siteId='bed7a899-7484-4a86-8c2a-0f5b786fca91';
+          const origin='https://ruu-work-design.netlify.app',sourceCommit='9b45278afce20e023b1c671d7b0c5694d6162041';
+          const pause=ms=>new Promise(r=>setTimeout(r,ms));
+          async function gh(p,method='GET',body){const r=await fetch('https://api.github.com/repos/'+repo+'/contents/'+p+(method==='GET'?'?ref='+branch:''),{method,headers:{Authorization:'Bearer '+process.env.GH_TOKEN,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(20000)});if(r.status===404&&method==='GET')return null;if(!r.ok)throw Error('GitHub operation failed: '+r.status);return r.json();}
+          async function read(p){const x=await gh(p);return x?JSON.parse(Buffer.from(x.content,'base64').toString('utf8')):null;}
+          async function write(p,obj){const old=await gh(p);await gh(p,'PUT',{message:'Update Netlify publication session metadata',branch,content:Buffer.from(JSON.stringify(obj,null,2)).toString('base64'),...(old?{sha:old.sha}:{})});}
+          (async()=>{
+            const html=fs.readFileSync('work-design/index.html');
+            if(crypto.createHash('sha1').update(Buffer.from('blob '+html.length+'\0')).update(html).digest('hex')!=='cc3275d194db703bddf345d1844517fbe9ec6437')throw Error('Unexpected intake source');
+            cp.execFileSync('node',['work-design-build/engine.test.cjs'],{stdio:'inherit'});
+            cp.execFileSync('node',['work-design-intake-build/intake.test.cjs'],{stdio:'inherit'});
+            const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'ruu-netlify-'));const root=path.join(tmp,'project'),pub=path.join(root,'public');
+            fs.mkdirSync(root,{recursive:true});fs.cpSync('work-design',pub,{recursive:true,filter:p=>!p.endsWith('README.md')});
+            fs.writeFileSync(path.join(root,'netlify.toml'),'[build]\n  publish = "public"\n  command = "echo Work-Design-OS-v1.1.0"\n');
+            fs.mkdirSync(path.join(pub,'api'),{recursive:true});fs.writeFileSync(path.join(pub,'api/work-design-ai'),JSON.stringify({enabled:false,error:'この体験版ではAI補助は未接続です。'}));
+            fs.writeFileSync(path.join(pub,'_redirects'),'/work-design / 302\n/work-design/ / 302\n');
+            fs.writeFileSync(path.join(pub,'_headers'),'/api/work-design-ai\n  Content-Type: application/json; charset=utf-8\n  Cache-Control: no-store\n/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: no-referrer\n  X-Frame-Options: DENY\n  Cache-Control: public, max-age=0, must-revalidate\n');
+            const archive=path.join(tmp,'project.zip');
+            cp.execFileSync('python3',['-c','import sys,zipfile;from pathlib import Path;r=Path(sys.argv[1]);z=zipfile.ZipFile(sys.argv[2],"w",zipfile.ZIP_DEFLATED);[(z.write(p,p.relative_to(r))) for p in r.rglob("*") if p.is_file()];z.close()',root,archive]);
+            const session=crypto.randomUUID();const pair=crypto.generateKeyPairSync('rsa',{modulusLength:3072});
+            await write('netlify-deploy-session/public.json',{session,run:process.env.GITHUB_RUN_ID,siteId,sourceCommit,expiresAt:new Date(Date.now()+600000).toISOString(),publicKey:pair.publicKey.export({type:'spki',format:'pem'}),algorithm:'RSA-OAEP-SHA256 + AES-256-GCM',notice:'Private key exists only in this running process; no credentials in source or artifacts.'});
+            console.log('Publication runner ready; awaiting one-time encrypted authorization.');
+            let envelope=null;for(let i=0;i<150;i++){const x=await read('netlify-deploy-session/encrypted.json');if(x&&x.session===session){envelope=x;break;}await pause(4000);}if(!envelope)throw Error('Authorization session expired');
+            const key=crypto.privateDecrypt({key:pair.privateKey,oaepHash:'sha256',oaepLabel:Buffer.from(session)},Buffer.from(envelope.key,'base64'));
+            const decipher=crypto.createDecipheriv('aes-256-gcm',key,Buffer.from(envelope.iv,'base64'));decipher.setAAD(Buffer.from(session));decipher.setAuthTag(Buffer.from(envelope.tag,'base64'));
+            const plain=Buffer.concat([decipher.update(Buffer.from(envelope.ciphertext,'base64')),decipher.final()]);const cfg=JSON.parse(plain.toString('utf8'));plain.fill(0);key.fill(0);
+            if(cfg.siteId!==siteId||cfg.sourceCommit!==sourceCommit||typeof cfg.proxy!=='string')throw Error('Authorization scope mismatch');
+            const proxy=new URL(cfg.proxy);if(proxy.origin!=='https://netlify-mcp.netlify.app'||!/^\/proxy\/[A-Za-z0-9_.-]+$/.test(proxy.pathname)||proxy.search||proxy.hash)throw Error('Invalid deployment endpoint');
+            console.log('::add-mask::'+cfg.proxy);console.log('::add-mask::'+proxy.pathname.split('/').pop());
+            const form=new FormData();form.append('zip',new Blob([fs.readFileSync(archive)],{type:'application/zip'}),'work-design-v1.1.0.zip');
+            const response=await fetch(cfg.proxy+'/api/v1/sites/'+siteId+'/builds',{method:'POST',headers:{'User-Agent':'netlify-mcp'},body:form,redirect:'error',signal:AbortSignal.timeout(90000)});
+            if(!response.ok)throw Error('Netlify upload HTTP '+response.status);let build=await response.json();if(Array.isArray(build))build=build[0];
+            const deployId=build.deploy_id;if(!deployId||!/^\w+$/.test(deployId))throw Error('Missing deploy identifier');
+            const report={siteId,deployId,buildId:build.id,sourceCommit,url:origin,state:'submitted',ai:'not connected',submittedAt:new Date().toISOString()};
+            await write('netlify-deploy-session/result.json',report);console.log('Build submitted:',deployId);
+            let ready=false;for(let i=0;i<120;i++){await pause(5000);const r=await fetch(cfg.proxy+'/api/v1/deploys/'+deployId,{signal:AbortSignal.timeout(20000),redirect:'error'});if(!r.ok)throw Error('Netlify status HTTP '+r.status);const d=await r.json();if(d.state==='error'){report.state='error';report.error=d.error_message||'Build failed';await write('netlify-deploy-session/result.json',report);throw Error('Netlify build failed');}if(d.state==='ready'){ready=true;report.state='ready';report.deployURL=d.deploy_ssl_url||d.deploy_url;break;}}
+            if(!ready)throw Error('Build not ready before timeout');
+            cfg.proxy='';const checked=[];for(const name of ['index.html','app.js','engine.js','style.css','reader.js','intake.js','intake-core.js','intake.css','vendor/pdf.min.mjs','vendor/pdf.worker.min.mjs']){const r=await fetch(origin+'/'+name,{signal:AbortSignal.timeout(30000)});if(!r.ok)throw Error('Public asset missing: '+name);const bytes=Buffer.from(await r.arrayBuffer());const expected=fs.readFileSync(path.join(pub,name));if(!bytes.equals(expected))throw Error('Public asset mismatch: '+name);checked.push(name);}
+            report.publicAssetsVerified=checked;report.checkedAt=new Date().toISOString();fs.writeFileSync('netlify-publication-result.json',JSON.stringify(report,null,2));
+            await write('netlify-deploy-session/result.json',report);fs.rmSync(tmp,{recursive:true,force:true});console.log('Public source verified at',origin);
+          })().catch(e=>{console.error('Publication stopped:',String(e.message).replace(/https:\/\/netlify-mcp\.netlify\.app\/proxy\/\S+/g,'[redacted]'));process.exit(1);});
+          JS
+      - name: Install isolated live test browser
+        run: |
+          mkdir -p /tmp/work-design-live-tests
+          cd /tmp/work-design-live-tests
+          npm init -y >/dev/null
+          npm install --ignore-scripts playwright@1.55.0 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Verify the actual public upload entrances and phone view
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node <<'JS'
+          const fs=require('node:fs'),{chromium}=require('/tmp/work-design-live-tests/node_modules/playwright');
+          (async()=>{const browser=await chromium.launch({headless:true});const page=await browser.newPage({viewport:{width:1440,height:1000}});const faults=[];page.on('pageerror',e=>faults.push(e.message));const checks=[];const check=(ok,label)=>{if(!ok)throw Error(label);checks.push(label);};
+          let r=await page.goto('https://ruu-work-design.netlify.app/',{waitUntil:'networkidle'});check(r.status()===200,'Public HTTPS entry returns 200');
+          for(const label of ['勤務表をアップロード','業務マニュアルを入れる','今日の仕事を記録する'])check(await page.getByRole('heading',{name:label,exact:true}).isVisible(),label+' is visible');
+          check((await page.locator('.footer').innerText()).includes('v1.1.0'),'Version 1.1.0 is served');
+          check((await page.locator('#ai-status').innerText()).includes('未接続'),'AI connection is not falsely represented');
+          await page.screenshot({path:'work-design-netlify-desktop.png',fullPage:true});
+          const fixtures=JSON.parse(fs.readFileSync('work-design-intake-build/fixtures.json','utf8'));
+          for(const [file,input,form,type] of [['shift.xlsx','#intake-shift-file','#intake-shift-form','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],['manual.docx','#intake-manual-file','#intake-manual-form','application/vnd.openxmlformats-officedocument.wordprocessingml.document'],['manual.pdf','#intake-manual-file','#intake-manual-form','application/pdf']]){await page.goto('https://ruu-work-design.netlify.app/',{waitUntil:'networkidle'});await page.locator(input).setInputFiles({name:file,mimeType:type,buffer:Buffer.from(fixtures[file],'base64')});await page.locator(form).waitFor({state:'visible',timeout:20000});check(true,file+' actual file read and confirmation form opens');}
+          await page.goto('https://ruu-work-design.netlify.app/',{waitUntil:'networkidle'});page.on('dialog',d=>d.accept());await page.locator('[data-intake=demo]').click();await page.waitForFunction(()=>JSON.parse(localStorage.getItem('work-design-os:v1'))?.intake?.sources?.length===2);await page.reload({waitUntil:'networkidle'});check(await page.evaluate(()=>JSON.parse(localStorage.getItem('work-design-os:v1')).intake.sources.length===2),'Public browser storage persists the sample intake');
+          await page.setViewportSize({width:390,height:844});await page.goto('https://ruu-work-design.netlify.app/',{waitUntil:'networkidle'});check(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),'Phone layout has no horizontal page overflow');await page.screenshot({path:'work-design-netlify-mobile.png',fullPage:true});check(faults.length===0,'No page script exceptions');await browser.close();
+          const result=JSON.parse(fs.readFileSync('netlify-publication-result.json','utf8'));result.liveBrowserChecks=checks;result.publicUI='verified';result.browser='Chromium';result.verifiedAt=new Date().toISOString();fs.writeFileSync('netlify-publication-result.json',JSON.stringify(result,null,2));
+          const endpoint='https://api.github.com/repos/derikaru-hash/ruu-first-app/contents/netlify-deploy-session/result.json';const headers={Authorization:'Bearer '+process.env.GH_TOKEN,Accept:'application/vnd.github+json','Content-Type':'application/json'};const old=await(await fetch(endpoint+'?ref=netlify-publish-work-design-20260905',{headers})).json();const updated=await fetch(endpoint,{method:'PUT',headers,body:JSON.stringify({branch:'netlify-publish-work-design-20260905',sha:old.sha,message:'Record verified public Netlify upload entrances',content:Buffer.from(JSON.stringify(result,null,2)).toString('base64')})});if(!updated.ok)throw Error('Cannot record live verification');console.log(JSON.stringify(result,null,2));
+          })().catch(e=>{console.error(e.message);process.exit(1);});
+          JS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: work-design-netlify-public-verification
+          path: |
+            netlify-publication-result.json
+            work-design-netlify-desktop.png
+            work-design-netlify-mobile.png
+          retention-days: 7
