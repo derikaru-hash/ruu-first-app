@@ -1,0 +1,10 @@
+{
+  "session": "362644d0-e5a4-4e29-85c4-de0d49494b06",
+  "run": "33968991391",
+  "siteId": "bed7a899-7484-4a86-8c2a-0f5b786fca91",
+  "sourceCommit": "9b45278afce20e023b1c671d7b0c5694d6162041",
+  "expiresAt": "2026-09-05T13:38:32.153Z",
+  "publicKey": "-----BEGIN PUBLIC KEY-----\nMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEApYfJpv4jaQlSJn9iGOAD\nqz2KkabpU67T4aDi8c0e5QRXD061qY/Fm78mBJam/A3zpJmumMtd5m4VlGXnDdW4\nONWJSFRXsIj1EWwnjZJpJz9XPLl+Vu+PUUQXyB1EYeiqU7kztlZ74UEnyNUEZgFX\nBKqJ85WAyzBG3qKdbWQHSZQs7V3nnISjKjfFnAIk4Am227uPM221a71JJon5PNNp\n0hhrFTXJ7smU0nwQE4yHi9QyRo0xUYJui4VQ9KtuHpnaHWWoXtfrYVo07AbBC6LD\nhlyZQL3OKJpVXkyVmCVdWxQPmkP0NYgtUQLE5L0lMBQC5gROeJIqLENY9tW5+CQc\nHjAR2ZAADwcSNAxsW1QDe+LR6rzyifxhbZ9ulOMCVPyj2GkzSikH7N60YxiSJtUd\n3v3GjNnV7+x0yyVqsycIecaXSux1tZ68/xJzNubWZgq2GRF+Zcale10YWvMX8p4l\n94Hhu3JPo8UQuZOSn3x78e0s+2PabB3H4mQ9+HviDsvxAgMBAAE=\n-----END PUBLIC KEY-----\n",
+  "algorithm": "RSA-OAEP-SHA256 + AES-256-GCM",
+  "notice": "Private key exists only in this running process; no credentials in source or artifacts."
+}
