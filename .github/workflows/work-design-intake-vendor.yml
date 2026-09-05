@@ -1,0 +1,30 @@
+name: Prepare Work Design PDF parser
+on:
+  push:
+    branches: [work-design-intake-20260905]
+    paths: [.github/workflows/work-design-intake-vendor.yml]
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Fetch pinned public dependency
+        run: |
+          npm pack pdfjs-dist@6.3.289 --ignore-scripts
+          mkdir -p extracted vendor
+          tar -xzf pdfjs-dist-6.3.289.tgz -C extracted
+          cp extracted/package/build/pdf.min.mjs vendor/pdf.min.mjs
+          cp extracted/package/build/pdf.worker.min.mjs vendor/pdf.worker.min.mjs
+          cp extracted/package/LICENSE vendor/PDFJS-LICENSE.txt
+          cp -r extracted/package/cmaps vendor/cmaps
+          sha256sum pdfjs-dist-6.3.289.tgz > vendor/archive.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: work-design-pdf-parser
+          path: vendor/
+          retention-days: 2
