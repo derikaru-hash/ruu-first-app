@@ -23,8 +23,8 @@ jobs:
           from pathlib import Path
           path = Path('menu-lab/index.html')
           text = path.read_text(encoding='utf-8')
-          old = "\n\n${texts().recipe}\n\n────────\n７視点の確認"
-          new = "\n\n${texts().insight}\n\n────────\n${texts().recipe}\n\n────────\n７視点の確認"
+          old = r"\n\n${texts().recipe}\n\n────────\n７視点の確認"
+          new = r"\n\n${texts().insight}\n\n────────\n${texts().recipe}\n\n────────\n７視点の確認"
           if new not in text:
               if old not in text:
                   raise SystemExit('Expected export section not found')
