@@ -1,0 +1,6 @@
+version=1.1.0
+raw_sha256=d953c86754c0bd7102f64c21f020c62fe19f510042e40985689ace322648cf46
+raw_bytes=91571
+encoded_chars=42672
+parts=6
+release=verify-on-development-branch-before-main
