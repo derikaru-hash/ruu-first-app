@@ -1,0 +1,78 @@
+name: Build verified Work Design OS
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - work-design-build/ready.txt
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ruu-work-design-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Verify and assemble isolated application
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, hashlib, json, lzma
+          root = Path('work-design-build')
+          parts = [root / ('part-%02d.b64' % i) for i in range(7)]
+          assert all(p.is_file() for p in parts), 'Missing source segment'
+          encoded = ''.join(p.read_text().strip() for p in parts)
+          assert len(encoded) == 44840, 'Unexpected encoded length'
+          raw = lzma.decompress(base64.b64decode(encoded, validate=True), memlimit=128*1024*1024)
+          expected = '2b36f515fa4f892ec2db672081a032d81edf6161342ad1d2ca19dc3bfa76932a'
+          assert len(raw) == 117839, 'Unexpected source length'
+          assert hashlib.sha256(raw).hexdigest() == expected, 'Source checksum mismatch'
+          files = json.loads(raw)
+          allowed = {
+              'work-design/README.md', 'work-design/index.html',
+              'work-design/engine.js', 'work-design/style.css', 'work-design/app.js',
+              'api/work-design-ai.js', 'work-design-build/engine.test.cjs',
+              'work-design-build/api.test.cjs', 'work-design-build/validation.json'
+          }
+          assert set(files) == allowed, 'Unexpected output path'
+          for name, text in files.items():
+              assert isinstance(text, str)
+              path = Path(name)
+              path.parent.mkdir(parents=True, exist_ok=True)
+              path.write_text(text, encoding='utf-8')
+          assert '仕事設計OS' in files['work-design/index.html']
+          assert "connect-src 'self'" in files['work-design/index.html']
+          print('Verified source:', len(raw), 'bytes; SHA256:', expected)
+          PY
+          node --check work-design/engine.js
+          node --check work-design/app.js
+          node --check api/work-design-ai.js
+          node work-design-build/engine.test.cjs
+          node work-design-build/api.test.cjs
+
+      - name: Commit only the isolated new application
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add work-design/README.md work-design/index.html work-design/engine.js work-design/style.css work-design/app.js api/work-design-ai.js work-design-build/engine.test.cjs work-design-build/api.test.cjs work-design-build/validation.json
+          if git diff --cached --quiet; then
+            echo "Application is already current"
+            exit 0
+          fi
+          git commit -m "Publish verified Work Design OS and guarded AI endpoint"
+          git pull --rebase origin main
+          git push origin HEAD:main
