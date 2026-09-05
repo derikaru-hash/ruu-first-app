@@ -1,0 +1,48 @@
+name: Finalize MENU LAB v3
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - menu-lab/finalize-v3.trigger
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Add insight trace to exported plan
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('menu-lab/index.html')
+          text = path.read_text(encoding='utf-8')
+          old = "\n\n${texts().recipe}\n\n────────\n７視点の確認"
+          new = "\n\n${texts().insight}\n\n────────\n${texts().recipe}\n\n────────\n７視点の確認"
+          if new not in text:
+              if old not in text:
+                  raise SystemExit('Expected export section not found')
+              text = text.replace(old, new, 1)
+              path.write_text(text, encoding='utf-8')
+          assert '海外の意見を、どう商品へ取り入れたか。' in text
+          assert 'SNS・店内POPの画像デモ' in text
+          PY
+
+      - name: Commit final version
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add menu-lab/index.html
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "Include overseas insight trace in MENU LAB plan export"
+          git push
