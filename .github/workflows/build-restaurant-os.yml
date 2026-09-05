@@ -1,0 +1,67 @@
+name: Build Restaurant OS demo
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - restaurant-os-build/ready.txt
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: restaurant-os-demo-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Assemble verified standalone demo
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, hashlib, lzma, re, subprocess
+          root = Path('restaurant-os-build')
+          parts = [root / ('part-%02d.b64' % i) for i in range(7)]
+          assert all(p.is_file() for p in parts), 'Missing source segment'
+          encoded = ''.join(p.read_text().strip() for p in parts)
+          raw = lzma.decompress(base64.b64decode(encoded, validate=True), memlimit=128*1024*1024)
+          expected = '6215121d5283fbba6013538cce8a22ee10b5284b8c648be0cec81cc1b362e1b3'
+          assert hashlib.sha256(raw).hexdigest() == expected, 'Source checksum mismatch'
+          assert len(raw) == 132716, 'Unexpected document size'
+          html = raw.decode('utf-8')
+          assert '飲食経営OS' in html
+          target = Path('restaurant-os')
+          target.mkdir(exist_ok=True)
+          (target / 'index.html').write_bytes(raw)
+          scripts = re.findall(r'<script[^>]*>(.*?)</script>', html, re.S)
+          assert scripts, 'No application scripts found'
+          for i, script in enumerate(scripts):
+              temporary = Path('/tmp') / ('restaurant-os-script-%d.js' % i)
+              temporary.write_text(script)
+              subprocess.run(['node', '--check', str(temporary)], check=True)
+          print('Verified standalone demo:', len(raw), 'bytes;', expected)
+          PY
+
+      - name: Commit isolated demo page
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add restaurant-os/index.html
+          if git diff --cached --quiet; then
+            echo "Demo is already current"
+            exit 0
+          fi
+          git commit -m "Publish verified Ruu restaurant OS integrated demo"
+          git pull --rebase origin main
+          git push origin HEAD:main
