@@ -1,0 +1,20 @@
+{
+  "suite": "native Chromium / same origin / shipped CSP",
+  "passed": 31,
+  "failed": 0,
+  "scope": [
+    "XLSX",
+    "DOCX",
+    "Japanese text PDF real worker",
+    "scan refusal",
+    "CSV",
+    "human confirmation",
+    "old calculations",
+    "native persistence",
+    "JSON roundtrip",
+    "XSS",
+    "mobile"
+  ],
+  "ai": "disabled by test endpoint; no live model or Redis tested",
+  "publicURL": "not verified by this local-server test"
+}
