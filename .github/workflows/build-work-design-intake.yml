@@ -1,0 +1,100 @@
+name: Verify Work Design intake v1.1
+on:
+  push:
+    branches: [work-design-intake-20260905]
+    paths: [work-design-intake-build/ready.txt]
+permissions:
+  contents: write
+concurrency:
+  group: work-design-intake-verification
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Assemble checked source without changing other applications
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object work-design/app.js)" = b7a0524e06c7b92435a79b53edb82fe3a2fb2a40
+          test "$(git hash-object work-design/index.html)" = ce788e493aae11ecabef03b830f19bfc81d3aee2
+          python3 - <<'PY'
+          import base64,hashlib,json,lzma
+          from pathlib import Path
+          root=Path('work-design-intake-build')
+          encoded=''.join((root/('part-%02d.b64'%i)).read_text().strip() for i in range(6))
+          assert len(encoded)==42672, 'Wrong encoded length'
+          raw=lzma.decompress(base64.b64decode(encoded,validate=True),memlimit=128*1024*1024)
+          assert len(raw)==91571
+          assert hashlib.sha256(raw).hexdigest()=='d953c86754c0bd7102f64c21f020c62fe19f510042e40985689ace322648cf46'
+          data=json.loads(raw)
+          allowed={'work-design/reader.js','work-design/intake-core.js','work-design/intake.js','work-design/intake.css','work-design-intake-build/apply.py','work-design-intake-build/RELEASE.txt','work-design-intake-build/intake.test.cjs','work-design-intake-build/e2e.cjs','work-design-intake-build/fixtures.json'}
+          assert set(data)==allowed
+          for name,text in data.items():
+              assert isinstance(text,str)
+              p=Path(name);p.parent.mkdir(parents=True,exist_ok=True);p.write_text(text,encoding='utf-8')
+          fixtures=json.loads((root/'fixtures.json').read_text())
+          assert set(fixtures)=={'shift.xlsx','manual.docx','manual.pdf','scanned.pdf'}
+          (root/'fixtures').mkdir(exist_ok=True)
+          for name,encoded in fixtures.items():
+              (root/'fixtures'/name).write_bytes(base64.b64decode(encoded,validate=True))
+          PY
+          python3 work-design-intake-build/apply.py
+          cat work-design-intake-build/RELEASE.txt >> work-design/README.md
+      - name: Install pinned PDF parser as local assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/intake-pdf work-design/vendor
+          cd /tmp/intake-pdf
+          npm pack pdfjs-dist@6.3.289 --ignore-scripts
+          echo '06f25e887adc6489f04c9fcb14198c77e4e5623a59a0bba5c4cea5838a4f1241  pdfjs-dist-6.3.289.tgz' | sha256sum -c -
+          tar -xzf pdfjs-dist-6.3.289.tgz
+          cp package/build/pdf.min.mjs package/build/pdf.worker.min.mjs "$GITHUB_WORKSPACE/work-design/vendor/"
+          cp package/LICENSE "$GITHUB_WORKSPACE/work-design/vendor/PDFJS-LICENSE.txt"
+          cp -r package/cmaps "$GITHUB_WORKSPACE/work-design/vendor/cmaps"
+      - name: Run calculation, safety and intake unit tests
+        run: |
+          set -euo pipefail
+          node --check work-design/app.js
+          node --check work-design/reader.js
+          node --check work-design/intake-core.js
+          node --check work-design/intake.js
+          node work-design-build/engine.test.cjs
+          node work-design-build/api.test.cjs
+          node work-design-intake-build/intake.test.cjs
+      - name: Install isolated test browser
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/intake-node
+          cd /tmp/intake-node
+          npm init -y
+          npm install --ignore-scripts playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Real uploads, PDF worker, CSP, persistence and phone layout
+        env:
+          PLAYWRIGHT_MODULE: /tmp/intake-node/node_modules/playwright
+        run: node work-design-intake-build/e2e.cjs
+      - name: Commit only verified intake files on development branch
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add work-design/index.html work-design/app.js work-design/README.md work-design/reader.js work-design/intake-core.js work-design/intake.js work-design/intake.css work-design/vendor work-design-intake-build/apply.py work-design-intake-build/RELEASE.txt work-design-intake-build/intake.test.cjs work-design-intake-build/e2e.cjs work-design-intake-build/fixtures.json work-design-intake-build/native-validation.json
+          git commit -m 'Add verified local work intake to Work Design OS v1.1'
+          git pull --rebase origin work-design-intake-20260905
+          git push origin HEAD:work-design-intake-20260905
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: work-design-intake-validation
+          path: |
+            work-design-intake-build/native-validation.json
+            work-design-intake-build/intake-desktop.png
+            work-design-intake-build/intake-mobile.png
+          retention-days: 7
