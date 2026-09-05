@@ -1,0 +1,64 @@
+name: Verify public Netlify work intake
+on:
+  push:
+    branches: [netlify-publish-work-design-20260905]
+    paths: [.github/workflows/verify-work-design-netlify-live.yml]
+permissions:
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 9b45278afce20e023b1c671d7b0c5694d6162041
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Inspect public assets
+        run: |
+          node <<'JS'
+          const fs=require('node:fs'),crypto=require('node:crypto');
+          (async()=>{const report=[];for(const name of ['index.html','app.js','engine.js','style.css','reader.js','intake.js','intake-core.js','intake.css','vendor/pdf.min.mjs','vendor/pdf.worker.min.mjs']){const r=await fetch('https://ruu-work-design.netlify.app/'+name,{signal:AbortSignal.timeout(20000)});const bytes=Buffer.from(await r.arrayBuffer());const expected=fs.readFileSync('work-design/'+name);report.push({name,status:r.status,url:r.url,bytes:bytes.length,expectedBytes:expected.length,exact:bytes.equals(expected),type:r.headers.get('content-type'),sha256:crypto.createHash('sha256').update(bytes).digest('hex')});if(name==='index.html'){fs.writeFileSync('public-index.html',bytes);console.log('PUBLIC HTML:',bytes.toString('utf8'));}}fs.writeFileSync('asset-verification.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));})().catch(e=>{console.error(e.message);process.exit(1)});
+          JS
+      - name: Install browser
+        run: |
+          mkdir -p /tmp/wd-live
+          cd /tmp/wd-live
+          npm init -y >/dev/null
+          npm install --ignore-scripts playwright@1.55.0 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Test actual public entrances and file readers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node <<'JS'
+          const fs=require('node:fs'),{chromium}=require('/tmp/wd-live/node_modules/playwright');
+          (async()=>{const browser=await chromium.launch({headless:true});const page=await browser.newPage({viewport:{width:1440,height:1000}});const faults=[],checks=[];page.on('pageerror',e=>faults.push(e.message));page.on('console',m=>{if(m.type()==='error')console.log('Browser console:',m.text())});const check=(ok,label)=>{if(!ok)throw Error(label);checks.push(label);};
+          try{const r=await page.goto('https://ruu-work-design.netlify.app/',{waitUntil:'networkidle'});await page.screenshot({path:'work-design-netlify-desktop.png',fullPage:true});console.log('Visible text:',(await page.locator('body').innerText()).slice(0,3500));check(r.status()===200,'Public HTTPS entry returns 200');
+          for(const label of ['勤務表をアップロード','業務マニュアルを入れる','今日の仕事を記録する'])check(await page.getByRole('heading',{name:label,exact:true}).isVisible(),label+' is visible');
+          check((await page.locator('.footer').innerText()).includes('v1.1.0'),'Version 1.1.0 is served');check((await page.locator('#ai-status').innerText()).includes('未接続'),'AI is correctly labelled unconnected');
+          const fixtures=JSON.parse(fs.readFileSync('work-design-intake-build/fixtures.json','utf8'));
+          for(const [file,input,form,type] of [['shift.xlsx','#intake-shift-file','#intake-shift-form','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],['manual.docx','#intake-manual-file','#intake-manual-form','application/vnd.openxmlformats-officedocument.wordprocessingml.document'],['manual.pdf','#intake-manual-file','#intake-manual-form','application/pdf']]){await page.goto('https://ruu-work-design.netlify.app/',{waitUntil:'networkidle'});await page.locator(input).setInputFiles({name:file,mimeType:type,buffer:Buffer.from(fixtures[file],'base64')});await page.locator(form).waitFor({state:'visible',timeout:20000});check(true,file+' real file read and confirmation form opens');}
+          await page.goto('https://ruu-work-design.netlify.app/',{waitUntil:'networkidle'});await page.locator('#intake-shift-file').setInputFiles({name:'sample.csv',mimeType:'text/csv',buffer:Buffer.from('担当,曜日,出勤,退勤,休憩分,技能,場所\n受付担当,月,09:00,12:00,0,接客,現地','utf8')});await page.locator('#intake-shift-form').waitFor({state:'visible',timeout:10000});check(true,'CSV file mapping form opens');
+          await page.goto('https://ruu-work-design.netlify.app/',{waitUntil:'networkidle'});page.on('dialog',d=>d.accept());await page.locator('[data-intake=demo]').click();await page.waitForFunction(()=>JSON.parse(localStorage.getItem('work-design-os:v1'))?.intake?.sources?.length===2);await page.reload({waitUntil:'networkidle'});check(await page.evaluate(()=>JSON.parse(localStorage.getItem('work-design-os:v1')).intake.sources.length===2),'Sample intake persists on the public origin');
+          await page.setViewportSize({width:390,height:844});await page.goto('https://ruu-work-design.netlify.app/',{waitUntil:'networkidle'});check(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),'390px phone layout has no horizontal overflow');await page.screenshot({path:'work-design-netlify-mobile.png',fullPage:true});check(faults.length===0,'No script exceptions');
+          const assets=JSON.parse(fs.readFileSync('asset-verification.json','utf8'));check(assets.filter(a=>a.name!=='index.html').every(a=>a.exact),'All JavaScript, CSS and PDF worker assets match the verified source');
+          const result={siteId:'bed7a899-7484-4a86-8c2a-0f5b786fca91',deployId:'6a9c193686e46ce007c0eab5',sourceCommit:'9b45278afce20e023b1c671d7b0c5694d6162041',url:'https://ruu-work-design.netlify.app/',state:'ready',publicUI:'verified',browser:'Chromium',verifiedAt:new Date().toISOString(),checks,assets,ai:'not connected',note:'Public upload is complete. This run checks the real production origin, not an in-memory page.'};fs.writeFileSync('netlify-publication-result.json',JSON.stringify(result,null,2));
+          const endpoint='https://api.github.com/repos/derikaru-hash/ruu-first-app/contents/netlify-deploy-session/result.json',headers={Authorization:'Bearer '+process.env.GH_TOKEN,Accept:'application/vnd.github+json','Content-Type':'application/json'};const old=await(await fetch(endpoint+'?ref=netlify-publish-work-design-20260905',{headers})).json();const updated=await fetch(endpoint,{method:'PUT',headers,body:JSON.stringify({branch:'netlify-publish-work-design-20260905',sha:old.sha,message:'Record successful public Netlify file intake verification',content:Buffer.from(JSON.stringify(result,null,2)).toString('base64')})});if(!updated.ok)throw Error('Cannot save verification record');console.log(JSON.stringify(result,null,2));
+          }finally{await page.screenshot({path:'work-design-netlify-last-screen.png',fullPage:true});await browser.close();}})().catch(e=>{console.error('Live verification failed:',e.message);process.exit(1)});
+          JS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: work-design-netlify-live-check
+          path: |
+            asset-verification.json
+            public-index.html
+            netlify-publication-result.json
+            work-design-netlify-desktop.png
+            work-design-netlify-mobile.png
+            work-design-netlify-last-screen.png
+          retention-days: 7
