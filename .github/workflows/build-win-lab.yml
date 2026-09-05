@@ -1,0 +1,71 @@
+name: Build Ruu strategy transfer demo
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - win-lab-build/ready.txt
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ruu-win-lab-demo-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Assemble and verify isolated static demo
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, hashlib, lzma, re, subprocess
+          root = Path('win-lab-build')
+          parts = [root / ('part-%02d.b64' % i) for i in range(6)]
+          assert all(p.is_file() for p in parts), 'Missing source segment'
+          encoded = ''.join(p.read_text().strip() for p in parts)
+          assert len(encoded) == 37968, 'Unexpected encoded size'
+          raw = lzma.decompress(base64.b64decode(encoded, validate=True), memlimit=128*1024*1024)
+          expected = '24cfda36194421eb2baaf55d745c72b416468915eb21c32056d2467581730d63'
+          assert len(raw) == 101188, 'Unexpected document size'
+          assert hashlib.sha256(raw).hexdigest() == expected, 'Source checksum mismatch'
+          html = raw.decode('utf-8')
+          assert '勝ち筋移植ラボ' in html and "connect-src 'none'" in html
+          scripts = re.findall(r'<script>(.*?)</script>', html, re.S)
+          assert len(scripts) == 1, 'Unexpected application scripts'
+          for i, script in enumerate(scripts):
+              temporary = Path('/tmp') / ('win-lab-script-%d.js' % i)
+              temporary.write_text(script)
+              subprocess.run(['node', '--check', str(temporary)], check=True)
+              digest = base64.b64encode(hashlib.sha256(script.encode()).digest()).decode()
+              assert 'sha256-' + digest in html, 'CSP script hash mismatch'
+          target = Path('win-lab')
+          target.mkdir(exist_ok=True)
+          (target / 'index.html').write_bytes(raw)
+          print('Verified:', len(raw), 'bytes; SHA256', expected)
+          PY
+
+      - name: Commit only the new demo page
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add win-lab/index.html
+          if git diff --cached --quiet; then
+            echo "Demo is already current"
+            exit 0
+          fi
+          git commit -m "Publish verified Ruu strategy transfer lab demo"
+          git pull --rebase origin main
+          git push origin HEAD:main
