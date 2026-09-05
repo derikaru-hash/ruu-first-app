@@ -1,0 +1,5 @@
+Restaurant OS integrated demo v1
+2026-09-05
+7 verified LZMA/base64 source segments.
+Expected HTML: 132716 bytes.
+SHA256: 6215121d5283fbba6013538cce8a22ee10b5284b8c648be0cec81cc1b362e1b3
