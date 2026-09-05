@@ -1,0 +1,5 @@
+Restaurant Suite / RUU EDITION v2.1
+2026-09-05
+8 verified LZMA/base64 segments.
+158794 bytes; 18 screens; 87 engine checks and 197 UI checks passed locally.
+SHA256 ed6c3dfa141642bda6b4ee3aebc5b65f1dbe038941b4d148045221c38d96c272
