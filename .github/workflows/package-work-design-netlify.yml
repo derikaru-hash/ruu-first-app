@@ -1,0 +1,36 @@
+name: Package Work Design for Netlify
+on:
+  push:
+    branches: [main]
+    paths: [netlify-build/ready.txt]
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify intake-enabled build
+        run: |
+          set -euo pipefail
+          grep -q 'v1.1.0' work-design/index.html
+          grep -q 'intake.js' work-design/index.html
+          grep -q '勤務表' work-design/app.js
+          test -f work-design/reader.js
+          test -f work-design/intake-core.js
+          test -f work-design/intake.js
+          test -f work-design/vendor/pdf.min.mjs
+          test -f work-design/vendor/pdf.worker.min.mjs
+      - name: Prepare static site
+        run: |
+          set -euo pipefail
+          rm -rf netlify-package
+          mkdir -p netlify-package
+          cp -a work-design/. netlify-package/
+          printf '%s\n' '/* /index.html 200' > netlify-package/_redirects
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ruu-work-design-netlify
+          path: netlify-package/
+          retention-days: 2
