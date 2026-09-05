@@ -1,0 +1,48 @@
+name: Build MENU LAB v3
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - menu-lab/build-v3/part-04.txt
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Assemble and verify MENU LAB
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f menu-lab/build-v3/part-00.txt
+          test -f menu-lab/build-v3/part-01.txt
+          test -f menu-lab/build-v3/part-02.txt
+          test -f menu-lab/build-v3/part-03.txt
+          test -f menu-lab/build-v3/part-04.txt
+          cat menu-lab/build-v3/part-*.txt | base64 --decode | gzip --decompress > menu-lab/index.html
+          grep -q "海外インサイト・反映" menu-lab/index.html
+          grep -q "発想を、試作できるレシピへ" menu-lab/index.html
+          grep -q "SNS・店内POPの画像デモ" menu-lab/index.html
+          grep -q "APIなし" menu-lab/index.html
+
+      - name: Commit assembled demo
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add menu-lab/index.html
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "Upgrade MENU LAB with recipes, insight trace, and creative demos"
+          git push
