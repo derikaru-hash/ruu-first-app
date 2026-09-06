@@ -1,0 +1,4 @@
+MENU STUDIO v1.0.0
+2026-09-06
+SHA256 aa933757bbdfa5e019dae8ad5914d44a14f5b0bd0f77263b5b618124613a77db
+105320 bytes; 6 source segments; 75 local interaction checks passed
