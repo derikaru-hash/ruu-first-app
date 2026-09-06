@@ -1,0 +1,85 @@
+name: Verify public MENU STUDIO demo
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/verify-menu-studio-live.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Check public HTTPS page without credentials
+        run: |
+          python3 - <<'PY'
+          import urllib.request, hashlib, time
+          url='https://ruu-first-app.vercel.app/menu-studio/'
+          expected='aa933757bbdfa5e019dae8ad5914d44a14f5b0bd0f77263b5b618124613a77db'
+          for attempt in range(3):
+              try:
+                  with urllib.request.urlopen(url,timeout=30) as r:
+                      body=r.read()
+                      print('HTTP',r.status,'URL',r.url,'bytes',len(body))
+                      assert r.status==200
+                      assert hashlib.sha256(body).hexdigest()==expected, 'Public HTML differs from tested artifact'
+                      print('Public URL serves exact verified HTML without authentication')
+                  break
+              except Exception as error:
+                  print(type(error).__name__,str(error))
+                  if attempt==2: raise
+                  time.sleep(10)
+          PY
+      - name: Prepare browser verification
+        run: |
+          mkdir -p "$RUNNER_TEMP/menu-studio-check"
+          cd "$RUNNER_TEMP/menu-studio-check"
+          npm install --no-audit --no-fund playwright
+          npx playwright install chromium --with-deps
+      - name: Verify real-origin interactions and persistence
+        run: |
+          cd "$RUNNER_TEMP/menu-studio-check"
+          cat > check.cjs <<'JS'
+          const { chromium } = require('playwright');
+          const assert = require('node:assert/strict');
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1440,height:1000}});
+            const errors=[];
+            page.on('pageerror',e=>errors.push(String(e)));
+            const response=await page.goto('https://ruu-first-app.vercel.app/menu-studio/',{waitUntil:'networkidle'});
+            assert.equal(response.status(),200);
+            assert.match(await page.title(),/^MENU STUDIO/);
+            assert.equal(await page.locator('[data-seed]').count(),6);
+            await page.evaluate('go(1)');
+            await page.locator('[data-select="0"]').click();
+            assert.equal(await page.evaluate('cost()'),435);
+            await page.evaluate('go(3)');
+            await page.locator('[data-act="sample-note"]').click();
+            await page.locator('[data-act="save-trial"]').click();
+            await page.locator('[data-act="improve"]').click();
+            await page.locator('#apply-improve').click();
+            assert.equal(await page.evaluate('cost()'),397);
+            assert.equal(await page.evaluate('S.recipe.sec'),65);
+            await page.reload({waitUntil:'networkidle'});
+            assert.equal(await page.evaluate('cost()'),397);
+            assert.equal(await page.evaluate('S.recipe.sec'),65);
+            await page.evaluate('go(4)');
+            await page.locator('#draft-text').fill('公開URLでの保存確認用・仮想原稿');
+            await page.reload({waitUntil:'networkidle'});
+            await page.evaluate('go(4)');
+            assert.equal(await page.locator('#draft-text').inputValue(),'公開URLでの保存確認用・仮想原稿');
+            for(const width of [1440,390]){
+              await page.setViewportSize({width,height:900});
+              for(let view=0;view<7;view++){
+                await page.evaluate(n=>go(n),view);
+                assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'overflow screen '+view+' width '+width);
+              }
+            }
+            assert.deepEqual(errors,[]);
+            console.log('PASS: public HTTPS, interactive scripts, improvement calculation, actual localStorage across reload, edited text retention, all seven screens at desktop and mobile widths, zero JS errors');
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1);});
+          JS
+          node check.cjs
