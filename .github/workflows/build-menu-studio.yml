@@ -1,0 +1,66 @@
+name: Build MENU STUDIO integrated menu demo
+
+on:
+  push:
+    branches: [main]
+    paths: [menu-studio-build/ready.txt]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: menu-studio-demo-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify and assemble isolated static demo
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, hashlib, lzma, re, subprocess
+          root = Path('menu-studio-build')
+          parts = [root / ('part-%02d.b64' % i) for i in range(6)]
+          assert all(p.is_file() for p in parts), 'Missing source part'
+          encoded = ''.join(p.read_text().strip() for p in parts)
+          assert len(encoded) == 41180, 'Encoded length mismatch'
+          raw = lzma.decompress(base64.b64decode(encoded, validate=True), memlimit=128*1024*1024)
+          expected = 'aa933757bbdfa5e019dae8ad5914d44a14f5b0bd0f77263b5b618124613a77db'
+          assert len(raw) == 105320, 'Document size mismatch'
+          assert hashlib.sha256(raw).hexdigest() == expected, 'Checksum mismatch'
+          html = raw.decode('utf-8')
+          assert 'MENU STUDIO' in html and "connect-src 'none'" in html
+          scripts = re.findall(r'<script>(.*?)</script>', html, re.S)
+          assert len(scripts) == 1
+          for i, script in enumerate(scripts):
+              path = Path('/tmp') / ('menu-studio-script-%d.js' % i)
+              path.write_text(script)
+              subprocess.run(['node', '--check', str(path)], check=True)
+              digest = base64.b64encode(hashlib.sha256(script.encode()).digest()).decode()
+              assert 'sha256-' + digest in html, 'CSP script checksum mismatch'
+          target = Path('menu-studio')
+          target.mkdir(exist_ok=True)
+          (target / 'index.html').write_bytes(raw)
+          print('Verified:', len(raw), 'bytes; SHA256', expected)
+          PY
+      - name: Commit only the new demo page
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add menu-studio/index.html
+          if git diff --cached --quiet; then
+            echo "Demo is already current"
+            exit 0
+          fi
+          git commit -m "Publish verified MENU STUDIO integrated demo"
+          git pull --rebase origin main
+          git push origin HEAD:main
