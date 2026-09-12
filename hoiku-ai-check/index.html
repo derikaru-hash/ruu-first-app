@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f766e">
+<title>保育AIチェック｜5分でわかる園のAI活用診断</title>
+<meta name="description" content="園の仕事を5分で整理し、AIに任せる仕事・人が判断する仕事・通常システム向きの仕事を見える化する無料デモ。">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top"><div class="wrap"><div class="brand"><span class="brand-dot"></span>保育AIチェック</div></div></header>
+<main class="wrap">
+<section class="hero">
+<div><div class="step-kicker">無料デモ｜個人情報の入力不要</div><h1>あなたの園で<br><span>AIに任せる仕事</span>を<br>5分で見える化。</h1><p>AIに向く仕事、補助にとどめる仕事、通常システム向きの仕事、人が判断すべき仕事を分けて、最初の一歩を提案します。</p><div class="chips"><span class="chip">園長・主任向け</span><span class="chip">スマホ対応</span><span class="chip">登録不要</span><span class="chip">園児情報は入力しません</span></div></div>
+<div class="hero-card"><div class="big">4分類</div><div class="label">AI導入で「やる・やらない」を整理</div><ul><li>今すぐAIで試せる</li><li>AIは下書き・整理だけ</li><li>通常システムの方が向く</li><li>人が最終判断する</li></ul></div>
+</section>
+<section class="panel" id="app">
+<div class="progress"><div id="progressBar"></div></div>
+<div class="panel-inner">
+<form id="checkForm">
+<section class="step" data-step="1">
+<div class="step-head"><div><div class="step-kicker">まず園の規模を教えてください</div><h2>園の基本情報</h2></div><div class="step-no">1 / 4</div></div>
+<div class="grid2">
+<div class="field"><label for="nurseryName">園名・法人名</label><input id="nurseryName" maxlength="60" placeholder="例：みらい保育園（仮名でもOK）"><div class="help">デモなので仮名でも診断できます。</div></div>
+<div class="field"><label for="type">施設種別</label><select id="type"><option>認可保育所</option><option>認定こども園</option><option>幼稚園</option><option>小規模保育</option><option>企業主導型保育</option><option>その他</option></select></div>
+<div class="field"><label for="children">園児数</label><select id="children"><option value="20">20名未満</option><option value="50">20〜49名</option><option value="80" selected>50〜99名</option><option value="130">100名以上</option></select></div>
+<div class="field"><label for="staff">職員数</label><select id="staff"><option value="10">10名未満</option><option value="20" selected>10〜29名</option><option value="40">30〜49名</option><option value="60">50名以上</option></select></div>
+</div>
+<div class="notice">この無料デモでは、園児名、保護者名、住所、健康情報、顔写真などの個人情報は入力しないでください。</div>
+</section>
+<section class="step hidden" data-step="2">
+<div class="step-head"><div><div class="step-kicker">時間を取られているものを選びます</div><h2>困っている仕事はどれですか？</h2></div><div class="step-no">2 / 4</div></div>
+<div class="task-grid" id="taskGrid"></div>
+<div class="slider-card"><div class="range-row"><div><strong>事務・文章・会議などに使う時間</strong><div class="help">園全体ではなく、あなた自身の1週間の目安でOKです。</div></div><output id="hoursOut">6時間/週</output><input id="hours" type="range" min="1" max="20" value="6"></div></div>
+<div id="taskError" class="error hidden">少なくとも1つ選んでください。</div>
+</section>
+<section class="step hidden" data-step="3">
+<div class="step-head"><div><div class="step-kicker">今ある仕組みも確認します</div><h2>現在の仕事の進め方</h2></div><div class="step-no">3 / 4</div></div>
+<div class="task-grid" id="toolGrid"></div>
+<div class="notice">すでに便利なICTを使っている仕事は、無理にAIへ置き換えない前提で診断します。</div>
+</section>
+<section class="step hidden" data-step="4">
+<div class="step-head"><div><div class="step-kicker">最後に優先したいことを選びます</div><h2>今、一番変えたいことは？</h2></div><div class="step-no">4 / 4</div></div>
+<div class="task-grid" id="goalGrid"></div>
+<div class="notice">「何でもAI化」ではなく、効果が出やすく、事故が起きにくい順に提案します。</div>
+</section>
+<div class="actions" id="navActions"><button type="button" class="btn secondary" id="backBtn" disabled>戻る</button><button type="button" class="btn primary" id="nextBtn">次へ</button></div>
+</form>
+<section class="results" id="results" aria-live="polite">
+<div class="score-wrap"><div class="score-ring" id="scoreRing"><div class="score-center"><b id="score">0</b><small>AI活用余地</small></div></div><div><div class="step-kicker">診断結果</div><h2 class="result-title" id="resultTitle"></h2><p class="result-lead" id="resultLead"></p><div class="metric-grid"><div class="metric"><b id="quickCount">0</b><span>今すぐ試せる業務</span></div><div class="metric"><b id="saveHours">0h</b><span>参考：週の削減余地</span></div><div class="metric"><b id="topPriority">-</b><span>最優先テーマ</span></div></div></div></div>
+<div class="category-grid" id="categoryGrid"></div>
+<div class="demo-box"><div class="step-kicker">1つだけ、その場で体験</div><h3>最優先業務を「AIを使った後」に変えてみる</h3><p class="help">これは実接続AIではなく、診断内容に応じた営業デモです。実導入時は御園の書式やルールに合わせます。</p><div class="demo-choose" id="demoChoices"></div><div class="compare"><div><h4>今まで</h4><div class="sample" id="beforeSample"></div></div><div class="after"><h4>AI活用後のイメージ</h4><div class="sample" id="afterSample"></div></div></div></div>
+<div class="timeline"><div class="time-card"><div class="month">STEP 1</div><strong>1業務だけ試す</strong><span class="help">個人情報を使わない題材で小さく検証。</span></div><div class="time-card"><div class="month">STEP 2</div><strong>園のルールへ合わせる</strong><span class="help">書式、承認、禁止事項を設定。</span></div><div class="time-card"><div class="month">STEP 3</div><strong>職員が使える形へ</strong><span class="help">研修、確認、保存まで業務化。</span></div></div>
+<div class="actions"><button type="button" class="btn ghost" id="restartBtn">最初からやり直す</button><button type="button" class="btn primary" id="downloadBtn">診断メモを保存</button></div><div id="downloadStatus" class="success hidden">診断メモを保存しました。</div>
+</section>
+</div>
+</section>
+</main>
+<footer class="footer-note"><div class="wrap">保育AIチェック デモ版　｜　個人情報を入力しない前提の簡易診断です。削減時間は参考値であり、導入前に実測・確認が必要です。</div></footer>
+<script src="app.js" defer></script>
+</body>
+</html>
