@@ -1,0 +1,13 @@
+{
+  "parts": 6,
+  "bytes": 102041,
+  "sha256": "b09febd150cb0d3fbd9218e2631853501b38a9470281b2e6e6ac26dad179b1b8",
+  "transport_repairs": [
+    ["ZMCUZF1zg5", "ZMCUZFzg5"],
+    ["vitHK1kbW", "vitHKbW"]
+  ],
+  "app": "AI経営会議室 / Boardroom Studio",
+  "mode": "offline teaching simulation, no AI API",
+  "ui_checks": 77,
+  "version": "2026-09-14-ui1"
+}
