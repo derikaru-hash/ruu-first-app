@@ -1,0 +1,92 @@
+name: Build and verify Hoiku Check v2
+on:
+  push:
+    branches: [main]
+    paths: ['hoiku-ai-check-v2-build/publish.json']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: hoiku-check-v2-publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Restore and validate isolated demo, preserve previous version
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, hashlib, json, lzma, re, subprocess, shutil
+          root=Path('hoiku-ai-check-v2-build')
+          m=json.loads((root/'publish.json').read_text())
+          encoded=''.join((root/('part-%02d.b64'%i)).read_text().strip() for i in range(m['parts']))
+          assert len(encoded)==m['encoded_length'], 'Encoded length mismatch'
+          raw=lzma.decompress(base64.b64decode(encoded,validate=True),memlimit=128*1024*1024)
+          assert len(raw)==m['raw_length'], 'Size mismatch'
+          assert hashlib.sha256(raw).hexdigest()==m['sha256'], 'Release checksum mismatch'
+          html=raw.decode('utf-8')
+          assert '保育AIチェック' in html and "connect-src 'none'" in html
+          scripts=re.findall(r'<script>(.*?)</script>',html,re.S)
+          assert len(scripts)==1
+          assert 'sha256-'+base64.b64encode(hashlib.sha256(scripts[0].encode()).digest()).decode() in html, 'CSP mismatch'
+          Path('/tmp/hoiku-check-v2.js').write_text(scripts[0])
+          subprocess.run(['node','--check','/tmp/hoiku-check-v2.js'],check=True)
+          target=Path('hoiku-ai-check');backup=root/'previous-v1'
+          backup.mkdir(parents=True,exist_ok=True)
+          for name in ['index.html','style.css','app.js']:
+              source=target/name
+              if source.exists() and not (backup/name).exists(): shutil.copy2(source,backup/name)
+          target.mkdir(exist_ok=True)
+          (target/'index.html').write_bytes(raw)
+          print('Validated HTML, CSP and JavaScript:',m['sha256'])
+          PY
+      - name: Publish only hoiku-ai-check and its backup
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add hoiku-ai-check/index.html hoiku-ai-check-v2-build/previous-v1/
+          if ! git diff --cached --quiet; then
+            git commit -m 'feat(hoiku-check): publish full workflow demo v2 with previous version backup'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+      - name: Check public release without login or bypass token
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,time,urllib.request
+          out=Path('/tmp/hoiku-check-public');out.mkdir(exist_ok=True)
+          expected=json.loads(Path('hoiku-ai-check-v2-build/publish.json').read_text())['sha256']
+          url='https://ruu-first-app.vercel.app/hoiku-ai-check/'
+          report={'url':url,'expected_sha256':expected,'verified':False}
+          for i in range(40):
+              try:
+                  req=urllib.request.Request(url+'?verify='+expected[:12],headers={'User-Agent':'Hoiku-Check-Public-Verification/2.0'})
+                  with urllib.request.urlopen(req,timeout=15) as r:
+                      raw=r.read();report.update(status=r.status,final_url=r.url,sha256=hashlib.sha256(raw).hexdigest())
+                  if report['status']==200 and report['sha256']==expected:
+                      report['verified']=True;print('PUBLIC VERIFIED: HTTP200, SHA256 MATCH, NO AUTH:',url);break
+                  print('Waiting for expected release',report['status'])
+              except Exception as e:report['error']=str(e)[:250];print('Waiting for release',report['error'])
+              time.sleep(8)
+          (out/'http-verification.json').write_text(json.dumps(report,indent=2))
+          if not report['verified']:raise SystemExit('Public release has not been verified')
+          PY
+      - name: Install browser testing tools
+        run: |
+          python3 -m pip install playwright==1.55.0
+          python3 -m playwright install --with-deps chromium
+      - name: Test public app and native browser persistence
+        run: python3 hoiku-ai-check-v2-build/public-smoke.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hoiku-check-v2-public-verification
+          path: /tmp/hoiku-check-public/
+          if-no-files-found: ignore
+          retention-days: 7
