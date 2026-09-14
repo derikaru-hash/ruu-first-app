@@ -1,0 +1,72 @@
+name: Build boardroom studio demo
+on:
+  push:
+    branches: [main]
+    paths: ['boardroom-studio-build/publish.json']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: boardroom-studio-publish
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Restore verified standalone demo
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, gzip, hashlib, json
+          root = Path('boardroom-studio-build')
+          manifest = json.loads((root / 'publish.json').read_text())
+          parts = [root / ('part-%02d.b64' % i) for i in range(manifest['parts'])]
+          encoded = ''.join(p.read_text().strip() for p in parts)
+          data = gzip.decompress(base64.b64decode(encoded, validate=True))
+          assert hashlib.sha256(data).hexdigest() == manifest['sha256'], 'Checksum mismatch'
+          assert len(data) == manifest['bytes'], 'Size mismatch'
+          text = data.decode('utf-8')
+          assert 'AI経営会議室' in text and "connect-src 'none'" in text
+          out = Path('boardroom-studio')
+          out.mkdir(exist_ok=True)
+          (out / 'index.html').write_bytes(data)
+          print('Verified standalone HTML:', len(data), 'bytes')
+          print('SHA256:', manifest['sha256'])
+          PY
+      - name: Commit only the new demo page
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add boardroom-studio/index.html
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'feat(boardroom): publish professional V1-V3 workshop workspace'
+          git pull --rebase origin main
+          git push origin HEAD:main
+      - name: Verify public page when deployment is available
+        continue-on-error: true
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, time, urllib.request
+          from pathlib import Path
+          expected = json.loads(Path('boardroom-studio-build/publish.json').read_text())['sha256']
+          url = 'https://ruu-first-app.vercel.app/boardroom-studio/'
+          for i in range(24):
+              try:
+                  req = urllib.request.Request(url + '?verify=' + expected[:12], headers={'User-Agent': 'Boardroom-public-verifier/1.0'})
+                  with urllib.request.urlopen(req, timeout=15) as r:
+                      data = r.read()
+                      status = r.status
+                  if status == 200 and hashlib.sha256(data).hexdigest() == expected:
+                      print('PUBLIC VERIFIED HTTP 200 SHA256 MATCH:', url)
+                      break
+                  print('Deployment not updated yet:', status)
+              except Exception as e:
+                  print('Waiting for public deployment:', str(e)[:180])
+              time.sleep(6)
+          else:
+              raise SystemExit('Public URL could not be verified within the build window')
+          PY
