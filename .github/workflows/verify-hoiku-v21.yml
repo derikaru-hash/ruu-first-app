@@ -1,0 +1,58 @@
+name: Review and publish Hoiku Check v2.1
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-hoiku-v21.yml'
+      - 'hoiku-ai-check-v21-build/**'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: hoiku-check-v21
+  cancel-in-progress: false
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Preserve source and existing test for review
+        run: |
+          mkdir -p /tmp/hoiku-v21/source
+          cp hoiku-ai-check/index.html /tmp/hoiku-v21/source/original.html
+          cp hoiku-ai-check-v2-build/public-smoke.py /tmp/hoiku-v21/source/previous-public-smoke.py
+      - name: Apply scoped revision when a reviewed patch is present
+        if: ${{ hashFiles('hoiku-ai-check-v21-build/revise.py') != '' }}
+        run: python3 hoiku-ai-check-v21-build/revise.py
+      - name: Install browser verification tools
+        if: ${{ hashFiles('hoiku-ai-check-v21-build/revise.py') != '' }}
+        run: |
+          python3 -m pip install playwright==1.55.0
+          python3 -m playwright install --with-deps chromium
+      - name: Verify revision before publishing
+        if: ${{ hashFiles('hoiku-ai-check-v21-build/revise.py') != '' }}
+        run: python3 hoiku-ai-check-v21-build/verify.py --local
+      - name: Publish only the reviewed application file
+        if: ${{ hashFiles('hoiku-ai-check-v21-build/revise.py') != '' }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add hoiku-ai-check/index.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'fix(hoiku-check): respect improvement preference and simplify initial diagnosis v2.1'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+      - name: Verify public release and save deliverable
+        if: ${{ hashFiles('hoiku-ai-check-v21-build/revise.py') != '' }}
+        run: python3 hoiku-ai-check-v21-build/verify.py --public
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hoiku-check-v21-review
+          path: /tmp/hoiku-v21/
+          retention-days: 7
+          if-no-files-found: error
