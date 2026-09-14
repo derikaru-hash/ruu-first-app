@@ -26,6 +26,9 @@ jobs:
           manifest = json.loads((root / 'publish.json').read_text())
           parts = [root / ('part-%02d.b64' % i) for i in range(manifest['parts'])]
           encoded = ''.join(p.read_text().strip() for p in parts)
+          for old, new in manifest.get('transport_repairs', []):
+              assert encoded.count(old) == 1, 'Unexpected transport normalization'
+              encoded = encoded.replace(old, new, 1)
           data = gzip.decompress(base64.b64decode(encoded, validate=True))
           assert hashlib.sha256(data).hexdigest() == manifest['sha256'], 'Checksum mismatch'
           assert len(data) == manifest['bytes'], 'Size mismatch'
