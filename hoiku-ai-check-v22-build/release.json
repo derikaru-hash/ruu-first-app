@@ -1,0 +1,12 @@
+{
+  "version": "2.2.0",
+  "base_sha256": "9b2372e1a02c624277069bcc8b825c685dc69528fb8950f6706f8c8fc438bce8",
+  "sha256": "729bc040b84b915dee2f56fb924adaad76fc9b628b189de82e9771d26c69fecb",
+  "bytes": 176094,
+  "public_url": "https://ruu-first-app.vercel.app/hoiku-ai-check/",
+  "scope": "Frontend demo only; no API calls, cross-device sync, or live consultation submission.",
+  "parts": 3,
+  "encoded_length": 28956,
+  "payload_bytes": 61938,
+  "payload_sha256": "45b885dfa699957d02ac704d0d1227c480f9f0ffb3f010cf3a4e10482df69ae0"
+}
