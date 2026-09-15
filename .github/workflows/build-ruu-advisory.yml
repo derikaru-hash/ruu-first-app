@@ -1,0 +1,90 @@
+name: Build and verify RUU ADVISORY
+on:
+  push:
+    branches: [main]
+    paths: ['ruu-advisory-build/publish.json']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: ruu-advisory-publish
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Restore and validate the isolated application
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, hashlib, json, lzma, re, subprocess
+          root = Path('ruu-advisory-build')
+          manifest = json.loads((root / 'publish.json').read_text())
+          assert manifest['parts'] == 3
+          encoded = ''.join((root / ('part-%02d.b64' % i)).read_text().strip() for i in range(manifest['parts']))
+          assert len(encoded) == manifest['encoded_length'], 'Encoded length mismatch'
+          raw = lzma.decompress(base64.b64decode(encoded, validate=True), memlimit=128*1024*1024)
+          assert len(raw) == manifest['raw_length'], 'HTML size mismatch'
+          assert hashlib.sha256(raw).hexdigest() == manifest['sha256'], 'HTML checksum mismatch'
+          html = raw.decode('utf-8')
+          assert 'RUU ADVISORY' in html and "connect-src 'none'" in html
+          scripts = re.findall(r'<script>(.*?)</script>', html, re.S)
+          assert len(scripts) == 1, 'Unexpected scripts'
+          js = scripts[0]
+          expected_csp = 'sha256-' + base64.b64encode(hashlib.sha256(js.encode()).digest()).decode()
+          assert expected_csp in html, 'CSP mismatch'
+          temporary = Path('/tmp/ruu-advisory-script.js')
+          temporary.write_text(js)
+          subprocess.run(['node', '--check', str(temporary)], check=True)
+          target = Path('ruu-advisory')
+          target.mkdir(exist_ok=True)
+          (target / 'index.html').write_bytes(raw)
+          print('HTML and CSP verified:', len(raw), 'bytes;', manifest['sha256'])
+          PY
+      - name: Publish only RUU ADVISORY without changing existing applications
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ruu-advisory/index.html
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'feat(ruu-advisory): publish consulting workspace v1.0.0'
+          git pull --rebase origin main
+          git push origin HEAD:main
+      - name: Verify the public release without login credentials
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, time, urllib.request
+          from pathlib import Path
+          expected = json.loads(Path('ruu-advisory-build/publish.json').read_text())['sha256']
+          url = 'https://ruu-first-app.vercel.app/ruu-advisory/'
+          result = {'url': url, 'expected_sha256': expected, 'verified': False, 'authentication': 'none'}
+          for i in range(32):
+              try:
+                  request = urllib.request.Request(url + '?verify=' + expected[:12], headers={'User-Agent':'RUU-ADVISORY-Public-Verification/1.0'})
+                  with urllib.request.urlopen(request, timeout=15) as response:
+                      raw = response.read()
+                      result.update(status=response.status, final_url=response.url, sha256=hashlib.sha256(raw).hexdigest())
+                  if result['status'] == 200 and result['sha256'] == expected:
+                      result['verified'] = True
+                      print('PUBLIC VERIFIED: HTTP 200, SHA256 MATCH, NO AUTH:', url)
+                      break
+                  print('Waiting for expected release:', result['status'])
+              except Exception as e:
+                  result['last_error'] = str(e)[:250]
+                  print('Waiting for public release:', result['last_error'])
+              time.sleep(8)
+          Path('/tmp/ruu-advisory-public-check.json').write_text(json.dumps(result, indent=2))
+          if not result['verified']:
+              raise SystemExit('The expected release could not yet be verified publicly.')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ruu-advisory-public-verification
+          path: /tmp/ruu-advisory-public-check.json
+          if-no-files-found: ignore
+          retention-days: 7
