@@ -1,0 +1,100 @@
+name: Review and publish Hoiku Check v2.2
+on:
+  push:
+    branches: [main]
+    paths: ['hoiku-ai-check-v22-build/release.json']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: hoiku-check-publish
+  cancel-in-progress: false
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Restore reviewed patch and verify existing version
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,base64,zlib,hashlib,shutil
+          root=Path('hoiku-ai-check-v22-build'); m=json.loads((root/'release.json').read_text())
+          encoded=''.join((root/('part-%02d.b64'%i)).read_text().strip() for i in range(m['parts']))
+          assert len(encoded)==m['encoded_length'],'Payload length mismatch'
+          decoder=zlib.decompressobj()
+          raw=decoder.decompress(base64.b64decode(encoded,validate=True),200000)
+          assert decoder.eof and not decoder.unused_data and not decoder.unconsumed_tail,'Invalid compressed payload'
+          assert len(raw)==m['payload_bytes'] and hashlib.sha256(raw).hexdigest()==m['payload_sha256'],'Payload checksum mismatch'
+          files=json.loads(raw)
+          assert set(files)=={'extension.js','extension.css','revise.py','verify.py'}
+          out=Path('/tmp/hoiku-v22');out.mkdir(exist_ok=True)
+          previous=Path('hoiku-ai-check/index.html').read_bytes()
+          assert hashlib.sha256(previous).hexdigest()==m['base_sha256'],'Current app changed; refusing overwrite'
+          (out/'previous-v2.1.html').write_bytes(previous)
+          for name,text in files.items():(root/name).write_text(text)
+          PY
+          python3 hoiku-ai-check-v22-build/revise.py
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,hashlib,shutil
+          r=Path('hoiku-ai-check-v22-build')
+          actual=hashlib.sha256(Path('hoiku-ai-check/index.html').read_bytes()).hexdigest()
+          assert actual==json.loads((r/'release.json').read_text())['sha256'],'Unexpected build output'
+          for name in ['extension.js','extension.css','revise.py','verify.py','manifest.json']:shutil.copy2(r/name,Path('/tmp/hoiku-v22')/name)
+          shutil.copy2('hoiku-ai-check/index.html','/tmp/hoiku-v22/index.html')
+          PY
+      - name: Install browser testing tools
+        run: |
+          python3 -m pip install playwright==1.55.0
+          python3 -m playwright install --with-deps chromium
+      - name: Native browser regression checks before publishing
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/hoiku-v22/local-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          sleep 1
+          HOIKU_VERIFY_URL=http://127.0.0.1:8765/hoiku-ai-check/ HOIKU_VERIFY_OUT=/tmp/hoiku-v22/local-native python3 hoiku-ai-check-v22-build/verify.py
+      - name: Publish only the reviewed hoiku application
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add hoiku-ai-check/index.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'feat(hoiku-check): transparent improvement score, combined methods, break-time goals and role comparison v2.2'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+          git rev-parse HEAD > /tmp/hoiku-v22/published-commit.txt
+      - name: Verify public HTML without login or bypass credentials
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,time,urllib.request
+          expected=json.loads(Path('hoiku-ai-check-v22-build/release.json').read_text())['sha256']
+          url='https://ruu-first-app.vercel.app/hoiku-ai-check/'
+          report={'url':url,'expected_sha256':expected,'verified':False}
+          for i in range(40):
+              try:
+                  request=urllib.request.Request(url,headers={'User-Agent':'Hoiku-v22-Anonymous-Verification'})
+                  with urllib.request.urlopen(request,timeout=15) as response:
+                      raw=response.read();report.update(status=response.status,final_url=response.url,sha256=hashlib.sha256(raw).hexdigest())
+                  if report['status']==200 and report['sha256']==expected:
+                      report['verified']=True;print('PUBLIC VERIFIED: HTTP 200, SHA256 MATCH, NO AUTH');break
+              except Exception as e:report['last_error']=str(e)[:250]
+              time.sleep(8)
+          Path('/tmp/hoiku-v22/http-verification.json').write_text(json.dumps(report,indent=2))
+          if not report['verified']:raise SystemExit('Public release not yet verified')
+          PY
+      - name: Test public HTTPS, native persistence and downloads
+        run: HOIKU_VERIFY_URL=https://ruu-first-app.vercel.app/hoiku-ai-check/ HOIKU_VERIFY_OUT=/tmp/hoiku-v22/public python3 hoiku-ai-check-v22-build/verify.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hoiku-check-v22-review
+          path: /tmp/hoiku-v22/
+          if-no-files-found: ignore
+          retention-days: 7
