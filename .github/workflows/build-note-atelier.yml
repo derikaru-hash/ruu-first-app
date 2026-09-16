@@ -31,6 +31,10 @@ jobs:
           assert len(raw) == manifest['raw_length'], 'HTML size mismatch'
           assert hashlib.sha256(raw).hexdigest() == manifest['sha256'], 'HTML checksum mismatch'
           html = raw.decode('utf-8')
+          html = html.replace('</style>', (root / 'mobile-fix.css').read_text() + '</style>', 1)
+          raw = html.encode('utf-8')
+          assert len(raw) == manifest['public_raw_length'], 'Final size mismatch'
+          assert hashlib.sha256(raw).hexdigest() == manifest['public_sha256'], 'Final checksum mismatch'
           assert 'note atelier' in html and "connect-src 'none'" in html
           scripts = re.findall(r'<script>(.*?)</script>', html, re.S)
           assert len(scripts) == 1
@@ -41,7 +45,7 @@ jobs:
           subprocess.run(['node', '--check', '/tmp/note-atelier-script.js'], check=True)
           Path('note-atelier').mkdir(exist_ok=True)
           Path('note-atelier/index.html').write_bytes(raw)
-          print('VERIFIED HTML:', len(raw), manifest['sha256'])
+          print('VERIFIED HTML:', len(raw), manifest['public_sha256'])
           PY
       - name: Install isolated browser test dependencies
         run: |
@@ -97,11 +101,13 @@ jobs:
                       check('ZIP integrity', archive.testzip() is None)
                       check('PNG banner', 'cover.png' in archive.namelist())
                       check('PNG inline', any(n.startswith('illustration-') for n in archive.namelist()))
-                  page.set_viewport_size({'width':390,'height':844})
-                  for route in ['home','research','brief','editor','review','visual','publish','analytics','method']:
-                      page.locator('[data-action="menu"]').click()
-                      page.locator('nav [data-go="'+route+'"]').click()
-                      check('mobile '+route, page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
+                  for width in [390,768]:
+                      page.set_viewport_size({'width':width,'height':844})
+                      for route in ['home','research','brief','editor','review','visual','publish','analytics','method']:
+                          page.locator('[data-action="menu"]').click()
+                          page.locator('nav [data-go="'+route+'"]').click()
+                          page.wait_for_timeout(250)
+                          check(str(width)+'px '+route, page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
                   check('no uncaught JavaScript errors', not errors)
                   browser.close()
           finally:
@@ -123,7 +129,7 @@ jobs:
           python3 - <<'PY'
           import hashlib, json, time, urllib.request
           from pathlib import Path
-          expected = json.loads(Path('note-atelier-build/publish.json').read_text())['sha256']
+          expected = json.loads(Path('note-atelier-build/publish.json').read_text())['public_sha256']
           url = 'https://ruu-first-app.vercel.app/note-atelier/'
           result = {'url':url,'expected_sha256':expected,'verified':False,'authentication':'none'}
           for i in range(36):
