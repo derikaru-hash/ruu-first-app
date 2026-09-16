@@ -1,0 +1,155 @@
+name: Build and verify note atelier
+on:
+  push:
+    branches: [main]
+    paths: ['note-atelier-build/publish.json']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: note-atelier-publish
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Restore and validate only the new application
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, hashlib, json, lzma, re, subprocess
+          root = Path('note-atelier-build')
+          manifest = json.loads((root / 'publish.json').read_text())
+          assert manifest['parts'] == 4
+          encoded = ''.join((root / ('part-%02d.b64' % i)).read_text().strip() for i in range(manifest['parts']))
+          assert len(encoded) == manifest['encoded_length'], 'Encoded length mismatch'
+          raw = lzma.decompress(base64.b64decode(encoded, validate=True), memlimit=128*1024*1024)
+          assert len(raw) == manifest['raw_length'], 'HTML size mismatch'
+          assert hashlib.sha256(raw).hexdigest() == manifest['sha256'], 'HTML checksum mismatch'
+          html = raw.decode('utf-8')
+          assert 'note atelier' in html and "connect-src 'none'" in html
+          scripts = re.findall(r'<script>(.*?)</script>', html, re.S)
+          assert len(scripts) == 1
+          js = scripts[0]
+          expected_csp = 'sha256-' + base64.b64encode(hashlib.sha256(js.encode()).digest()).decode()
+          assert expected_csp in html, 'CSP mismatch'
+          Path('/tmp/note-atelier-script.js').write_text(js)
+          subprocess.run(['node', '--check', '/tmp/note-atelier-script.js'], check=True)
+          Path('note-atelier').mkdir(exist_ok=True)
+          Path('note-atelier/index.html').write_bytes(raw)
+          print('VERIFIED HTML:', len(raw), manifest['sha256'])
+          PY
+      - name: Install isolated browser test dependencies
+        run: |
+          python3 -m venv /tmp/note-atelier-check-env
+          /tmp/note-atelier-check-env/bin/pip install --quiet playwright==1.57.0
+          if ! command -v google-chrome >/dev/null; then
+            /tmp/note-atelier-check-env/bin/python -m playwright install --with-deps chromium
+          fi
+      - name: Test native browser persistence and complete image pipeline
+        run: |
+          /tmp/note-atelier-check-env/bin/python - <<'PY'
+          from playwright.sync_api import sync_playwright
+          from pathlib import Path
+          import json, shutil, subprocess, sys, time, zipfile
+          server = subprocess.Popen([sys.executable, '-m', 'http.server', '8880', '--bind', '127.0.0.1', '--directory', 'note-atelier'], stdout=subprocess.DEVNULL)
+          checks, errors = [], []
+          def check(name, value):
+              assert value, name
+              checks.append(name)
+          try:
+              time.sleep(1)
+              with sync_playwright() as pw:
+                  executable = shutil.which('google-chrome')
+                  browser = pw.chromium.launch(**({'executable_path': executable} if executable else {}), args=['--no-sandbox'])
+                  page = browser.new_page(viewport={'width':1440,'height':1000}, accept_downloads=True)
+                  page.on('pageerror', lambda err: errors.append(str(err)))
+                  page.goto('http://127.0.0.1:8880', wait_until='networkidle')
+                  check('home', 'note atelier' in page.title())
+                  page.screenshot(path='/tmp/note-atelier-home.png', full_page=True)
+                  for route in ['research','brief','editor','review','visual','publish','analytics','method']:
+                      page.locator('nav [data-go="'+route+'"]').click()
+                      check('desktop '+route, page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
+                  page.locator('nav [data-go="research"]').click()
+                  page.locator('[data-bind="brief.experience"]').fill('Native persistence verification - test data only.')
+                  page.reload(wait_until='networkidle')
+                  check('native localStorage reload', page.locator('[data-bind="brief.experience"]').input_value() == 'Native persistence verification - test data only.')
+                  page.locator('nav [data-go="visual"]').click()
+                  page.locator('[data-action="generate-images"]').click()
+                  page.wait_for_timeout(650)
+                  check('three cover variants', page.locator('[data-action="use-art"]').count()==3)
+                  page.locator('[data-action="use-art"]').first.click()
+                  page.locator('[data-action="visual-type"][data-id="inline"]').click()
+                  page.locator('[data-action="generate-images"]').click()
+                  page.wait_for_timeout(650)
+                  page.locator('[data-action="use-art"]').nth(1).click()
+                  page.locator('[data-action="preview"]').first.click()
+                  check('cover and inline in preview', page.locator('.reading-preview img').count()==2)
+                  page.locator('[data-action="modal-close"]').first.click()
+                  with page.expect_download() as download:
+                      page.locator('[data-action="export"]').first.click()
+                  download.value.save_as('/tmp/note-atelier-test-kit.zip')
+                  with zipfile.ZipFile('/tmp/note-atelier-test-kit.zip') as archive:
+                      check('ZIP integrity', archive.testzip() is None)
+                      check('PNG banner', 'cover.png' in archive.namelist())
+                      check('PNG inline', any(n.startswith('illustration-') for n in archive.namelist()))
+                  page.set_viewport_size({'width':390,'height':844})
+                  for route in ['home','research','brief','editor','review','visual','publish','analytics','method']:
+                      page.locator('[data-action="menu"]').click()
+                      page.locator('nav [data-go="'+route+'"]').click()
+                      check('mobile '+route, page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
+                  check('no uncaught JavaScript errors', not errors)
+                  browser.close()
+          finally:
+              server.terminate()
+              Path('/tmp/note-atelier-browser-check.json').write_text(json.dumps({'checks':checks,'errors':errors,'nativeStorage':True}, indent=2))
+          print('NATIVE BROWSER VERIFIED:', len(checks), 'checks')
+          PY
+      - name: Publish only note-atelier without modifying existing applications
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add note-atelier/index.html
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'feat(note-atelier): publish editorial workflow studio v1.0.0'
+          git pull --rebase origin main
+          git push origin HEAD:main
+      - name: Verify the public release without login credentials
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, time, urllib.request
+          from pathlib import Path
+          expected = json.loads(Path('note-atelier-build/publish.json').read_text())['sha256']
+          url = 'https://ruu-first-app.vercel.app/note-atelier/'
+          result = {'url':url,'expected_sha256':expected,'verified':False,'authentication':'none'}
+          for i in range(36):
+              try:
+                  request = urllib.request.Request(url+'?verify='+expected[:12], headers={'User-Agent':'Note-Atelier-Public-Verification/1.0'})
+                  with urllib.request.urlopen(request, timeout=15) as response:
+                      raw = response.read()
+                      result.update(status=response.status, final_url=response.url, sha256=hashlib.sha256(raw).hexdigest())
+                  if result['status']==200 and result['sha256']==expected:
+                      result['verified']=True
+                      print('PUBLIC VERIFIED: HTTP 200, SHA256 MATCH, NO AUTH:',url)
+                      break
+              except Exception as error:
+                  result['last_error']=str(error)[:250]
+              time.sleep(8)
+          Path('/tmp/note-atelier-public-check.json').write_text(json.dumps(result, indent=2))
+          if not result['verified']:
+              raise SystemExit('Expected public release not verified yet.')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: note-atelier-verification
+          path: |
+            /tmp/note-atelier-browser-check.json
+            /tmp/note-atelier-public-check.json
+            /tmp/note-atelier-home.png
+          if-no-files-found: ignore
+          retention-days: 7
