@@ -1,0 +1,2 @@
+
+@media(max-width:780px){.editor-layout{grid-template-columns:minmax(0,1fr)}.editor-layout>*{min-width:0}.outline-list{max-width:100%}}
