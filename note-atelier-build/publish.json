@@ -3,5 +3,7 @@
   "encoded_length": 53912,
   "raw_length": 143806,
   "sha256": "c3cbb58a9dd4f6b469d037d8776f82bad09584aa6dc5c7c36ff0857db79c1055",
+  "public_raw_length": 143942,
+  "public_sha256": "01fcdf720fb1006a835eb2563d2d87dc5e978a384be1de31826034bfdf83c5ae",
   "version": "1.0.0"
 }
