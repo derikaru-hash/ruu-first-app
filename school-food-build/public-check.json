@@ -1,0 +1,10 @@
+{
+  "url": "https://ruu-first-app.vercel.app/school-food/",
+  "expected_sha256": "d2bd8db81091a94fa9ecc8c425396bfc6ef8653ab3e135aff21935b028ebd17b",
+  "verified": true,
+  "authentication": "none",
+  "status": 200,
+  "final_url": "https://ruu-first-app.vercel.app/school-food/?verify=d2bd8db81091",
+  "sha256": "d2bd8db81091a94fa9ecc8c425396bfc6ef8653ab3e135aff21935b028ebd17b",
+  "checked_at_utc": "2026-09-17T02:31:32.746717+00:00"
+}
