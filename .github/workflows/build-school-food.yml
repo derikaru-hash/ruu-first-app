@@ -1,0 +1,137 @@
+name: Verify and publish Smart School Food demo
+on:
+  push:
+    branches: [main]
+    paths: ['school-food-build/publish.json']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: school-food-publish
+  cancel-in-progress: false
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Restore checksum-verified isolated demo and tests
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import base64, hashlib, json, lzma, re, subprocess
+          root = Path('school-food-build')
+          m = json.loads((root / 'publish.json').read_text())
+          assert 1 <= m['parts'] <= 12
+          encoded = ''.join((root / ('part-%02d.b64' % i)).read_text().strip() for i in range(m['parts']))
+          assert len(encoded) == m['encoded_length']
+          raw = lzma.decompress(base64.b64decode(encoded, validate=True), memlimit=128*1024*1024)
+          assert len(raw) == m['raw_length']
+          assert hashlib.sha256(raw).hexdigest() == m['bundle_sha256']
+          files = json.loads(raw)
+          allowed = {'dist/index.html','src/engine.js','tests/test_engine.js','tests/verify.py'}
+          assert set(files) == allowed
+          target = Path('/tmp/school-food-qa')
+          for name, text in files.items():
+              path = target / name
+              path.parent.mkdir(parents=True, exist_ok=True)
+              path.write_text(text, encoding='utf-8')
+          html = files['dist/index.html']
+          assert hashlib.sha256(html.encode()).hexdigest() == m['html_sha256']
+          assert "connect-src 'none'" in html and 'MIYAKONOJO' in html
+          scripts = re.findall(r'<script>(.*?)</script>', html, re.S)
+          assert len(scripts) == 1
+          assert 'sha256-' + base64.b64encode(hashlib.sha256(scripts[0].encode()).digest()).decode() in html
+          path = target / 'app.js'
+          path.write_text(scripts[0])
+          subprocess.run(['node','--check',str(path)],check=True)
+          print('Bundle and CSP verified:',m['html_sha256'])
+          PY
+      - name: Verify engine constraints
+        run: node /tmp/school-food-qa/tests/test_engine.js | tee /tmp/school-food-qa/tests/engine-results.txt
+      - name: Install browser test tools
+        run: |
+          python -m pip install playwright==1.57.0
+          python -m playwright install --with-deps chromium
+      - name: Verify actual browser workflows and native storage
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 --directory /tmp/school-food-qa/dist > /tmp/school-food-qa/server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID' EXIT
+          python /tmp/school-food-qa/tests/verify.py --url http://127.0.0.1:8765/ | tee /tmp/school-food-qa/tests/browser-run.log
+      - name: Publish only the new school-food application
+        run: |
+          mkdir -p school-food
+          cp /tmp/school-food-qa/dist/index.html school-food/index.html
+          cp /tmp/school-food-qa/tests/browser-results.json school-food-build/qa-results.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add school-food/index.html school-food-build/qa-results.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'feat(school-food): publish verified isolated school lunch demo v1.0.0'
+          for attempt in 1 2 3 4; do
+            git pull --rebase origin main
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 3
+          done
+          exit 1
+      - name: Verify anonymous public URL and exact application bytes
+        run: |
+          python - <<'PY'
+          import datetime, hashlib, json, time, urllib.request
+          from pathlib import Path
+          expected = json.loads(Path('school-food-build/publish.json').read_text())['html_sha256']
+          url = 'https://ruu-first-app.vercel.app/school-food/'
+          report = {'url':url,'expected_sha256':expected,'verified':False,'authentication':'none'}
+          for i in range(36):
+              try:
+                  req = urllib.request.Request(url+'?verify='+expected[:12],headers={'User-Agent':'School-Food-Demo-Verification/1.0'})
+                  with urllib.request.urlopen(req,timeout=15) as response:
+                      content = response.read()
+                      report.update(status=response.status,final_url=response.url,sha256=hashlib.sha256(content).hexdigest())
+                  if report['status']==200 and report['sha256']==expected:
+                      report['verified']=True
+                      report.pop('last_error',None)
+                      break
+              except Exception as e:
+                  report['last_error']=str(e)[:250]
+              time.sleep(8)
+          report['checked_at_utc']=datetime.datetime.now(datetime.timezone.utc).isoformat()
+          result=json.dumps(report,indent=2)
+          Path('/tmp/school-food-qa/public-check.json').write_text(result)
+          print(result)
+          if not report['verified']:
+              raise SystemExit('Expected release is not publicly verified yet.')
+          Path('school-food-build/public-check.json').write_text(result+'\n')
+          PY
+      - name: Record public verification
+        run: |
+          git add school-food-build/public-check.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'test(school-food): record anonymous HTTP and SHA256 release verification'
+          for attempt in 1 2 3 4; do
+            git pull --rebase origin main
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 3
+          done
+          exit 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: school-food-verification
+          path: |
+            /tmp/school-food-qa/tests/*.json
+            /tmp/school-food-qa/tests/*.txt
+            /tmp/school-food-qa/tests/*.log
+            /tmp/school-food-qa/screenshots/*.png
+            /tmp/school-food-qa/public-check.json
+          if-no-files-found: ignore
+          retention-days: 7
